@@ -1,0 +1,25 @@
+# Python / FastAPI
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Virtualenv
+.venv/
+env/
+venv/
+
+# IDEs e editores
+.vscode/
+.idea/
+
+# Banco local e dados
+data/
+*.db
+
+# Cache e build
+dist/
+build/
+*.egg-info/
+.pytest_cache/
