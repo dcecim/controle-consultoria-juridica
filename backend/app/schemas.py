@@ -1,5 +1,17 @@
+# imports e schemas de auditoria
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Any, Optional, Dict
+from datetime import datetime
+
+class TenantBase(BaseModel):
+    name: str
+
+class TenantCreate(TenantBase):
+    pass
+
+class Tenant(TenantBase):
+    id: int
+    model_config = ConfigDict(from_attributes=True)
 
 class OrganizationBase(BaseModel):
     name: str
@@ -9,6 +21,7 @@ class OrganizationCreate(OrganizationBase):
 
 class Organization(OrganizationBase):
     id: int
+    tenant_id: int
     model_config = ConfigDict(from_attributes=True)
 
 class ContactBase(BaseModel):
@@ -26,6 +39,7 @@ class ContactUpdate(ContactBase):
 
 class Contact(ContactBase):
     id: int
+    tenant_id: int
     model_config = ConfigDict(from_attributes=True)
 
 class StageBase(BaseModel):
@@ -37,6 +51,7 @@ class StageCreate(StageBase):
 
 class Stage(StageBase):
     id: int
+    tenant_id: int
     model_config = ConfigDict(from_attributes=True)
 
 class DealBase(BaseModel):
@@ -55,4 +70,23 @@ class DealUpdate(DealBase):
 
 class Deal(DealBase):
     id: int
+    tenant_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class AuditLogBase(BaseModel):
+    tenant_id: int
+    entity_name: str
+    entity_id: str
+    action: str
+    actor: str
+    before: Optional[Dict[str, Any]] = None
+    after: Optional[Dict[str, Any]] = None
+    details: Optional[Dict[str, Any]] = None
+
+class AuditLogCreate(AuditLogBase):
+    pass
+
+class AuditLogRead(AuditLogBase):
+    id: int
+    timestamp: datetime
     model_config = ConfigDict(from_attributes=True)

@@ -1,25 +1,19 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
-from .database import Base, engine, SessionLocal
-from . import models
-from .routers import contacts, deals, organizations, stages
+from .database import Base, engine, log_engine_info
+from .routers import contacts, deals, organizations, stages, tenants
+from .middleware import RequestContextMiddleware
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        # Seed de etapas padrão (apenas se não houver nenhuma)
-        if db.query(models.Stage).count() == 0:
-            for name, order in [("Novo", 1), ("Qualificação", 2), ("Proposta", 3), ("Fechamento", 4)]:
-                db.add(models.Stage(name=name, order=order))
-            db.commit()
-    finally:
-        db.close()
 
 app = FastAPI(title="Consultoria Jurídica - CRM")
+app.middleware("http")(RequestContextMiddleware)
 
 init_db()
+log_engine_info()
 
+app.include_router(tenants.router)
 app.include_router(contacts.router)
 app.include_router(deals.router)
 app.include_router(organizations.router)
