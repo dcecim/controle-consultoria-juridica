@@ -24,7 +24,6 @@ def create_stage(
     db.add(obj)
     db.commit()
     db.refresh(obj)
-    # Audit (after only)
     record_audit_event(
         db,
         tenant_id=x_tenant_id,
@@ -52,7 +51,6 @@ def delete_stage(
     before = {"id": obj.id, "name": obj.name, "order": obj.order, "tenant_id": obj.tenant_id}
     db.delete(obj)
     db.commit()
-    # Audit (before only)
     record_audit_event(
         db,
         tenant_id=x_tenant_id,

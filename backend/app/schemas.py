@@ -15,6 +15,7 @@ class Tenant(TenantBase):
 
 class OrganizationBase(BaseModel):
     name: str
+    sector: Optional[str] = None  # NOVO
 
 class OrganizationCreate(OrganizationBase):
     pass
@@ -30,6 +31,8 @@ class ContactBase(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     organization_id: Optional[int] = None
+    client_type: Optional[str] = None     # NOVO: PF/PJ/Publico
+    lead_source: Optional[str] = None     # NOVO: indicacao/website/redes/evento
 
 class ContactCreate(ContactBase):
     pass
@@ -57,10 +60,18 @@ class Stage(StageBase):
 class DealBase(BaseModel):
     title: str
     value: float = 0.0
-    status: str = "open"
+    status: Optional[str] = None
     stage_id: Optional[int] = None
     contact_id: Optional[int] = None
     organization_id: Optional[int] = None
+    # NOVOS: dados para scoring
+    main_issue: Optional[str] = None
+    estimated_value: Optional[float] = None
+    opened_at: Optional[datetime] = None
+    closed_at: Optional[datetime] = None
+    email_open_rate: Optional[float] = None
+    interactions_total: Optional[int] = None
+    docs_shared: Optional[bool] = None
 
 class DealCreate(DealBase):
     pass
@@ -73,6 +84,7 @@ class Deal(DealBase):
     tenant_id: int
     model_config = ConfigDict(from_attributes=True)
 
+# Auditoria (mantido)
 class AuditLogBase(BaseModel):
     tenant_id: int
     entity_name: str
@@ -89,4 +101,21 @@ class AuditLogCreate(AuditLogBase):
 class AuditLogRead(AuditLogBase):
     id: int
     timestamp: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+# NOVOS: LeadScore
+class LeadScoreBase(BaseModel):
+    tenant_id: int
+    contact_id: Optional[int] = None
+    deal_id: Optional[int] = None
+    score: int
+    model_version: str
+    factors: Optional[Dict[str, Any]] = None
+
+class LeadScoreCreate(LeadScoreBase):
+    pass
+
+class LeadScoreRead(LeadScoreBase):
+    id: int
+    created_at: datetime
     model_config = ConfigDict(from_attributes=True)

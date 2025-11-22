@@ -101,15 +101,47 @@ Depois rode:
 ```bash
 uvicorn backend.app.main:app --reload
 ```
+## Configuração (.env)
+Crie um arquivo `.env` na raiz do projeto:
 
-> Observação: o backend carrega `.env` automaticamente e faz `create_all` ao iniciar. Para produção, adicionaremos Alembic para migrações.
-// ... existing code ...
-### Configurar o backend para usar o container
+## Troubleshooting
+- Erro: `UnicodeDecodeError` no startup do PostgreSQL (psycopg2)
+  - Causa: `DATABASE_URL` com caracteres não UTF-8 ou acentos não codificados.
+  - Solução:
+    - Remova `DATABASE_URL` da sessão atual e use `PG*`:
+      - PowerShell: `$env:DATABASE_URL=$null`
+    - Confirme que o `.env` está salvo em UTF-8 e sem acentos nos valores.
+    - Verifique a URL usada:
+      - `python -c "from backend.app.database import engine; print(engine.dialect.name, engine.url.render_as_string(hide_password=True))"`
+    - Se cair em SQLite, revise o `.env` e reinicie. Para limpar residual:
+      - `Remove-Item -Force .\data\crm.db`
 
-Defina `DATABASE_URL`:
-
-```bash
-$env:DATABASE_URL="postgresql+psycopg2://postgres:postgres@localhost:5432/crm"
-```
-
-Ou crie um `.env` na raiz (ignorado pelo Git):
+## Auditoria e Logging
+- Cada request recebe `X-Request-ID` e logs no formato:
+ts=
+lvl=<nível> logger=
+req_id=
+tenant=
+actor=
+msg=
+- Até termos autenticação, use `X-Actor` para registrar o autor.
+- `audit_logs` registra `CREATE/UPDATE/DELETE` para `stages`, `contacts`, `organizations`, `deals`.
+## Lead Scoring (Dados e Endpoints)
+- Campos adicionados:
+  - `Organization.sector`: setor de atuação (PJ).
+  - `Contact.client_type`: tipo de cliente (`PF`, `PJ`, `Publico`).
+  - `Contact.lead_source`: origem do lead (`indicacao`, `website`, `redes`, `evento`).
+  - `Deal.main_issue`: assunto principal do contato.
+  - `Deal.estimated_value`: valor estimado da causa.
+  - `Deal.opened_at` / `Deal.closed_at`: datas para medir duração/fechamento.
+  - `Deal.email_open_rate`, `Deal.interactions_total`, `Deal.docs_shared`: métricas de engajamento.
+- Nova entidade: `LeadScore`
+  - `tenant_id`, `contact_id` (opcional), `deal_id` (opcional), `score` (0–100), `model_version`, `factors (JSON)`, `created_at`.
+- Endpoints:
+  - `POST /lead-scores` — cria pontuação (requer `X-Tenant-ID`, opcionalmente `contact_id` ou `deal_id`). Auditado como `SCORE`.
+  - `GET /lead-scores?contact_id=&deal_id=` — lista pontuações por contato/negócio do tenant.
+- Auditoria:
+  - Eventos `CREATE/UPDATE/DELETE` já são registrados nos roteadores de CRM.
+  - `SCORE` é registrado ao criar pontuações com `LeadScore`.
+- Observações de migração:
+  - Sem Alembic, adicionar colunas não atualiza tabelas já existentes. Em desenvolvimento, recrie o schema; em produção, configure Alembic para migrações.

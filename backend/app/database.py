@@ -39,12 +39,14 @@ def build_database_url_from_env() -> str | None:
         return f"postgresql+psycopg2://{quote(user)}:{quote(password)}@{host}:{port}/{quote(db)}"
     return None
 
-DATABASE_URL = os.getenv("DATABASE_URL") or build_database_url_from_env()
+# Preferir PG* em vez de DATABASE_URL para evitar DSN com caracteres inválidos
+pg_url = build_database_url_from_env()
+env_url = os.getenv("DATABASE_URL")
+DATABASE_URL = pg_url or env_url
 
 if DATABASE_URL:
     DATABASE_URL = normalize_database_url(DATABASE_URL)
     engine = create_engine(DATABASE_URL, pool_pre_ping=True)
-    # Após criar o engine, adicione este log (use render_as_string para ocultar senha):
     def log_engine_info():
         try:
             redacted_url = engine.url.render_as_string(hide_password=True)

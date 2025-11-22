@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from ..database import SessionLocal
 from .. import models, schemas
+from ..audit import record_audit_event
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
@@ -14,6 +15,9 @@ def get_db():
 
 def get_tenant_id(x_tenant_id: int = Header(..., alias="X-Tenant-ID")) -> int:
     return x_tenant_id
+
+def to_dict(obj: models.Deal) -> dict:
+    return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
 
 @router.get("/", response_model=list[schemas.Deal])
 def list_deals(db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):
@@ -31,16 +35,37 @@ def get_deal(deal_id: int, db: Session = Depends(get_db), tenant_id: int = Depen
     return obj
 
 @router.post("/", response_model=schemas.Deal, status_code=201)
-def create_deal(payload: schemas.DealCreate, db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):
+def create_deal(
+    payload: schemas.DealCreate,
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+    x_actor: str = Header("system", alias="X-Actor"),
+):
     obj = models.Deal(**payload.dict())
     obj.tenant_id = tenant_id
     db.add(obj)
     db.commit()
     db.refresh(obj)
+    record_audit_event(
+        db,
+        tenant_id=tenant_id,
+        actor=x_actor,
+        action="CREATE",
+        entity_name="Deal",
+        entity_id=obj.id,
+        before=None,
+        after=to_dict(obj),
+    )
     return obj
 
 @router.put("/{deal_id}", response_model=schemas.Deal)
-def update_deal(deal_id: int, payload: schemas.DealUpdate, db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):
+def update_deal(
+    deal_id: int,
+    payload: schemas.DealUpdate,
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+    x_actor: str = Header("system", alias="X-Actor"),
+):
     obj = (
         db.query(models.Deal)
         .filter(models.Deal.id == deal_id, models.Deal.tenant_id == tenant_id)
@@ -48,14 +73,31 @@ def update_deal(deal_id: int, payload: schemas.DealUpdate, db: Session = Depends
     )
     if not obj:
         raise HTTPException(status_code=404, detail="Deal not found")
+    before_fields = {k: getattr(obj, k) for k in payload.dict(exclude_unset=True).keys()}
     for k, v in payload.dict(exclude_unset=True).items():
         setattr(obj, k, v)
     db.commit()
     db.refresh(obj)
+    after_fields = {k: getattr(obj, k) for k in payload.dict(exclude_unset=True).keys()}
+    record_audit_event(
+        db,
+        tenant_id=tenant_id,
+        actor=x_actor,
+        action="UPDATE",
+        entity_name="Deal",
+        entity_id=obj.id,
+        before=before_fields,
+        after=after_fields,
+    )
     return obj
 
 @router.delete("/{deal_id}", status_code=204)
-def delete_deal(deal_id: int, db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):
+def delete_deal(
+    deal_id: int,
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+    x_actor: str = Header("system", alias="X-Actor"),
+):
     obj = (
         db.query(models.Deal)
         .filter(models.Deal.id == deal_id, models.Deal.tenant_id == tenant_id)
@@ -63,6 +105,17 @@ def delete_deal(deal_id: int, db: Session = Depends(get_db), tenant_id: int = De
     )
     if not obj:
         raise HTTPException(status_code=404, detail="Deal not found")
+    before = to_dict(obj)
     db.delete(obj)
     db.commit()
+    record_audit_event(
+        db,
+        tenant_id=tenant_id,
+        actor=x_actor,
+        action="DELETE",
+        entity_name="Deal",
+        entity_id=deal_id,
+        before=before,
+        after=None,
+    )
     return None

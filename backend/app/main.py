@@ -1,8 +1,12 @@
+# Startup sequence
+from .logging_config import configure_logging
+configure_logging()
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from .database import Base, engine, log_engine_info
 from .routers import contacts, deals, organizations, stages, tenants
 from .middleware import RequestContextMiddleware
+from .routers import lead_scores  # NOVO
 
 def init_db():
     Base.metadata.create_all(bind=engine)
@@ -18,6 +22,7 @@ app.include_router(contacts.router)
 app.include_router(deals.router)
 app.include_router(organizations.router)
 app.include_router(stages.router)
+app.include_router(lead_scores.router)  # NOVO
 
 @app.get("/", include_in_schema=False)
 def root():
