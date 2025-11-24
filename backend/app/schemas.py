@@ -31,8 +31,8 @@ class ContactBase(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     organization_id: Optional[int] = None
-    client_type: Optional[str] = None     # NOVO: PF/PJ/Publico
-    lead_source: Optional[str] = None     # NOVO: indicacao/website/redes/evento
+    client_type: Optional[str] = None      # NOVO
+    lead_source: Optional[str] = None      # NOVO
 
 class ContactCreate(ContactBase):
     pass
@@ -64,7 +64,7 @@ class DealBase(BaseModel):
     stage_id: Optional[int] = None
     contact_id: Optional[int] = None
     organization_id: Optional[int] = None
-    # NOVOS: dados para scoring
+    # NOVOS
     main_issue: Optional[str] = None
     estimated_value: Optional[float] = None
     opened_at: Optional[datetime] = None
@@ -84,7 +84,6 @@ class Deal(DealBase):
     tenant_id: int
     model_config = ConfigDict(from_attributes=True)
 
-# Auditoria (mantido)
 class AuditLogBase(BaseModel):
     tenant_id: int
     entity_name: str

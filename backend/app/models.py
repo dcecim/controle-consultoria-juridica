@@ -15,8 +15,7 @@ class Organization(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
-    # NOVO: setor da organização (para PJ)
-    sector = Column(String, nullable=True)
+    sector = Column(String, nullable=True)  # NOVO
 
     contacts = relationship("Contact", back_populates="organization")
     deals = relationship("Deal", back_populates="organization")
@@ -30,9 +29,8 @@ class Contact(Base):
     phone = Column(String, nullable=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
-    # NOVOS: tipo de cliente e fonte do lead
-    client_type = Column(String, nullable=True)  # PF / PJ / Publico
-    lead_source = Column(String, nullable=True)  # indicacao / website / redes / evento
+    client_type = Column(String, nullable=True)  # NOVO: PF / PJ / Publico
+    lead_source = Column(String, nullable=True)  # NOVO: indicacao / website / redes / evento
 
     organization = relationship("Organization", back_populates="contacts")
     deals = relationship("Deal", back_populates="contact")
@@ -57,8 +55,8 @@ class Deal(Base):
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     # NOVOS: variáveis para lead scoring
-    main_issue = Column(String, nullable=True)              # assunto principal
-    estimated_value = Column(Float, nullable=True)          # valor estimado da causa
+    main_issue = Column(String, nullable=True)
+    estimated_value = Column(Float, nullable=True)
     opened_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     closed_at = Column(DateTime(timezone=True), nullable=True)
     email_open_rate = Column(Float, nullable=True)          # 0.0–1.0
@@ -87,7 +85,6 @@ class LeadScore(Base):
     __tablename__ = "lead_scores"
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
-    # Pontuação pode referenciar um contato e/ou um negócio
     contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=True, index=True)
     deal_id = Column(Integer, ForeignKey("deals.id"), nullable=True, index=True)
     score = Column(Integer, nullable=False)                 # 0–100

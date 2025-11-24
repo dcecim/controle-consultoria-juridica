@@ -65,3 +65,33 @@ else:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+# NOVO: patch mínimo de schema para colunas novas (PostgreSQL)
+def apply_minimal_schema_patch(engine):
+    if engine.dialect.name != "postgresql":
+        return
+    try:
+        with engine.connect() as conn:
+            conn.execution_options(isolation_level="AUTOCOMMIT")
+            # organizations
+            conn.exec_driver_sql("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS sector VARCHAR;")
+            # contacts
+            conn.exec_driver_sql("ALTER TABLE contacts ADD COLUMN IF NOT EXISTS client_type VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lead_source VARCHAR;")
+            # deals
+            conn.exec_driver_sql("ALTER TABLE deals ADD COLUMN IF NOT EXISTS main_issue VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE deals ADD COLUMN IF NOT EXISTS estimated_value DOUBLE PRECISION;")
+            conn.exec_driver_sql("ALTER TABLE deals ADD COLUMN IF NOT EXISTS opened_at TIMESTAMPTZ DEFAULT NOW();")
+            conn.exec_driver_sql("ALTER TABLE deals ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;")
+            conn.exec_driver_sql("ALTER TABLE deals ADD COLUMN IF NOT EXISTS email_open_rate DOUBLE PRECISION;")
+            conn.exec_driver_sql("ALTER TABLE deals ADD COLUMN IF NOT EXISTS interactions_total INTEGER NOT NULL DEFAULT 0;")
+            conn.exec_driver_sql("ALTER TABLE deals ADD COLUMN IF NOT EXISTS docs_shared BOOLEAN NOT NULL DEFAULT FALSE;")
+        logger.info(
+            "Minimal schema patch applied for lead scoring columns",
+            extra={"request_id": "-", "tenant_id": "-", "actor": "-"},
+        )
+    except Exception as e:
+        logger.error(
+            f"Failed to apply minimal schema patch: {e}",
+            extra={"request_id": "-", "tenant_id": "-", "actor": "-"},
+        )

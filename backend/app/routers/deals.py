@@ -41,7 +41,39 @@ def create_deal(
     tenant_id: int = Depends(get_tenant_id),
     x_actor: str = Header("system", alias="X-Actor"),
 ):
-    obj = models.Deal(**payload.dict())
+    data = payload.dict(exclude_none=True)
+
+    # Validação de stage_id
+    if data.get("stage_id") is not None:
+        st = (
+            db.query(models.Stage)
+            .filter(models.Stage.id == data["stage_id"], models.Stage.tenant_id == tenant_id)
+            .first()
+        )
+        if not st:
+            raise HTTPException(status_code=400, detail="Invalid stage_id for tenant")
+
+    # Validação de contact_id
+    if data.get("contact_id") is not None:
+        ct = (
+            db.query(models.Contact)
+            .filter(models.Contact.id == data["contact_id"], models.Contact.tenant_id == tenant_id)
+            .first()
+        )
+        if not ct:
+            raise HTTPException(status_code=400, detail="Invalid contact_id for tenant")
+
+    # Validação de organization_id
+    if data.get("organization_id") is not None:
+        org = (
+            db.query(models.Organization)
+            .filter(models.Organization.id == data["organization_id"], models.Organization.tenant_id == tenant_id)
+            .first()
+        )
+        if not org:
+            raise HTTPException(status_code=400, detail="Invalid organization_id for tenant")
+
+    obj = models.Deal(**data)
     obj.tenant_id = tenant_id
     db.add(obj)
     db.commit()

@@ -25,7 +25,7 @@ def create_lead_score(
 ):
     if not payload.contact_id and not payload.deal_id:
         raise HTTPException(status_code=400, detail="Either contact_id or deal_id is required")
-    # Validar propriedade por tenant
+
     if payload.contact_id:
         contact = (
             db.query(models.Contact)
@@ -63,7 +63,12 @@ def create_lead_score(
         entity_name="LeadScore",
         entity_id=entry.id,
         before=None,
-        after={"score": entry.score, "model_version": entry.model_version, "contact_id": entry.contact_id, "deal_id": entry.deal_id},
+        after={
+            "score": entry.score,
+            "model_version": entry.model_version,
+            "contact_id": entry.contact_id,
+            "deal_id": entry.deal_id,
+        },
         details={"factors": entry.factors} if entry.factors else None,
     )
     return entry

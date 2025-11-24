@@ -62,3 +62,15 @@ def delete_stage(
         after=None,
     )
     return {"ok": True}
+
+@router.get("/", response_model=list[schemas.Stage])
+def list_stages(
+    db: Session = Depends(get_db),
+    x_tenant_id: int = Header(..., alias="X-Tenant-ID"),
+):
+    return (
+        db.query(models.Stage)
+        .filter(models.Stage.tenant_id == x_tenant_id)
+        .order_by(models.Stage.order.asc())
+        .all()
+    )
