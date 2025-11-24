@@ -14,6 +14,9 @@ BASE_DIR = r"c:\Demandas\Consultor-juridico"
 DB_DIR = os.path.join(BASE_DIR, "data")
 os.makedirs(DB_DIR, exist_ok=True)
 
+# carregar .env explicitamente do diretório do projeto, sobrescrevendo envs existentes
+load_dotenv(dotenv_path=os.path.join(BASE_DIR, ".env"), override=True, encoding="utf-8")
+
 def normalize_database_url(url_str: str) -> str:
     try:
         from sqlalchemy.engine import make_url
@@ -39,22 +42,32 @@ def build_database_url_from_env() -> str | None:
         return f"postgresql+psycopg2://{quote(user)}:{quote(password)}@{host}:{port}/{quote(db)}"
     return None
 
-# Preferir PG* em vez de DATABASE_URL para evitar DSN com caracteres inválidos
-pg_url = build_database_url_from_env()
-env_url = os.getenv("DATABASE_URL")
-DATABASE_URL = pg_url or env_url
+# preferir PG* do .env; se não houver, cair para DATABASE_URL
+DATABASE_URL = build_database_url_from_env() or os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
     DATABASE_URL = normalize_database_url(DATABASE_URL)
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
-    def log_engine_info():
-        try:
-            redacted_url = engine.url.render_as_string(hide_password=True)
-        except Exception:
-            redacted_url = str(engine.url)
-        logger.info(
-            f"Database engine initialized dialect={engine.dialect.name} url={redacted_url}",
+    try:
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        def log_engine_info():
+            try:
+                redacted_url = engine.url.render_as_string(hide_password=True)
+            except Exception:
+                redacted_url = str(engine.url)
+            logger.info(
+                f"Database engine initialized dialect={engine.dialect.name} url={redacted_url}",
+                extra={"request_id": "-", "tenant_id": "-", "actor": "-"},
+            )
+        log_engine_info()
+    except Exception as e:
+        logger.error(
+            f"Failed to initialize Postgres engine, falling back to SQLite: {e}",
             extra={"request_id": "-", "tenant_id": "-", "actor": "-"},
+        )
+        # Fallback para SQLite
+        SQLALCHEMY_DATABASE_URL = f"sqlite:///{os.path.join(DB_DIR, 'crm.db')}"
+        engine = create_engine(
+            SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
         )
 else:
     SQLALCHEMY_DATABASE_URL = f"sqlite:///{os.path.join(DB_DIR, 'crm.db')}"
