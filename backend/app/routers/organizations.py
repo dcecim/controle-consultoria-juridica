@@ -20,8 +20,34 @@ def to_dict(obj: models.Organization) -> dict:
     return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
 
 @router.get("/", response_model=list[schemas.Organization])
-def list_organizations(db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):
-    return db.query(models.Organization).filter(models.Organization.tenant_id == tenant_id).all()
+def list_organizations(
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+    sector: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    sort_by: str | None = None,
+    sort_dir: str = "asc",
+):
+    q = db.query(models.Organization).filter(models.Organization.tenant_id == tenant_id)
+    if sector is not None:
+        q = q.filter(models.Organization.sector == sector)
+
+    allowed = {
+        "id": models.Organization.id,
+        "name": models.Organization.name,
+        "sector": models.Organization.sector,
+    }
+    if sort_by in allowed:
+        col = allowed[sort_by]
+        if sort_dir.lower() == "desc":
+            q = q.order_by(col.desc())
+        else:
+            q = q.order_by(col.asc())
+    else:
+        q = q.order_by(models.Organization.name.asc())
+
+    return q.offset(offset).limit(limit).all()
 
 @router.get("/{org_id}", response_model=schemas.Organization)
 def get_organization(org_id: int, db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):

@@ -91,3 +91,34 @@ class LeadScore(Base):
     model_version = Column(String, nullable=False)
     factors = Column(JSON, nullable=True)                   # explicações/sinais usados
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class DocumentType(Base):
+    __tablename__ = "document_types"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    code = Column(String, nullable=True, index=True)            # opcional, único por tenant se desejado
+    description = Column(String, nullable=True)
+    allowed_mime_types = Column(JSON, nullable=True)            # lista opcional de mimes permitidos
+
+class DealRequiredDocument(Base):
+    __tablename__ = "deal_required_documents"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    deal_id = Column(Integer, ForeignKey("deals.id"), nullable=False, index=True)
+    document_type_id = Column(Integer, ForeignKey("document_types.id"), nullable=False, index=True)
+    required_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class DocumentUpload(Base):
+    __tablename__ = "document_uploads"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    deal_id = Column(Integer, ForeignKey("deals.id"), nullable=False, index=True)
+    document_type_id = Column(Integer, ForeignKey("document_types.id"), nullable=False, index=True)
+    contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=True, index=True)
+    filename = Column(String, nullable=False)                   # nome salvo (uuid.ext)
+    original_filename = Column(String, nullable=False)
+    mime_type = Column(String, nullable=True)
+    size_bytes = Column(Integer, nullable=True)
+    notes = Column(String, nullable=True)
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

@@ -1,6 +1,6 @@
 # imports e schemas de auditoria
 from pydantic import BaseModel, ConfigDict
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, List
 from datetime import datetime
 
 class TenantBase(BaseModel):
@@ -137,3 +137,54 @@ class LeadScoreRead(LeadScoreBase):
     id: int
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+# Documentos: tipos, obrigatórios e uploads
+class DocumentTypeBase(BaseModel):
+    name: str
+    code: Optional[str] = None
+    description: Optional[str] = None
+    allowed_mime_types: Optional[List[str]] = None
+
+class DocumentTypeCreate(DocumentTypeBase):
+    pass
+
+class DocumentTypeRead(DocumentTypeBase):
+    id: int
+    tenant_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class DealRequiredDocumentRead(BaseModel):
+    id: int
+    tenant_id: int
+    deal_id: int
+    document_type_id: int
+    required_at: datetime
+    # Status agregado
+    fulfilled: bool
+    uploads_count: int
+    document_type: Optional[DocumentTypeRead] = None
+    model_config = ConfigDict(from_attributes=True)
+
+class DocumentUploadRead(BaseModel):
+    id: int
+    tenant_id: int
+    deal_id: int
+    document_type_id: int
+    contact_id: Optional[int] = None
+    filename: str
+    original_filename: str
+    mime_type: Optional[str] = None
+    size_bytes: Optional[int] = None
+    notes: Optional[str] = None
+    uploaded_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class DealRequiredSet(BaseModel):
+    type_ids: List[int]
+
+# Definição de schema de atualização de DocumentType
+# Classe de atualização de tipos de documento
+class DocumentTypeUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    allowed_mime_types: list[str] | None = None

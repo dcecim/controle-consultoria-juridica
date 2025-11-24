@@ -7,6 +7,8 @@ from .. import models, schemas
 from ..audit import record_audit_event
 
 # função deal_metrics no módulo routers/deals.py
+# routers/deals.py — mover metrics acima de get_deal
+
 router = APIRouter(prefix="/deals", tags=["deals"])
 
 def get_db():
@@ -32,6 +34,8 @@ def list_deals(
     status: str | None = None,
     limit: int = 50,
     offset: int = 0,
+    sort_by: str | None = None,
+    sort_dir: str = "asc",
 ):
     q = db.query(models.Deal).filter(models.Deal.tenant_id == tenant_id)
     if stage_id is not None:
@@ -42,7 +46,83 @@ def list_deals(
         q = q.filter(models.Deal.organization_id == organization_id)
     if status is not None:
         q = q.filter(models.Deal.status == status)
+
+    # Ordenação segura por whitelist
+    allowed = {
+        "id": models.Deal.id,
+        "opened_at": models.Deal.opened_at,
+        "closed_at": models.Deal.closed_at,
+        "value": models.Deal.value,
+        "estimated_value": models.Deal.estimated_value,
+        "interactions_total": models.Deal.interactions_total,
+        "email_open_rate": models.Deal.email_open_rate,
+        "status": models.Deal.status,
+        "stage_id": models.Deal.stage_id,
+        "contact_id": models.Deal.contact_id,
+        "organization_id": models.Deal.organization_id,
+        "title": models.Deal.title,
+    }
+    if sort_by in allowed:
+        col = allowed[sort_by]
+        if sort_dir.lower() == "desc":
+            q = q.order_by(col.desc())
+        else:
+            q = q.order_by(col.asc())
+    else:
+        q = q.order_by(models.Deal.opened_at.desc())
+
     return q.offset(offset).limit(limit).all()
+
+@router.get("/metrics")
+def deal_metrics(
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+):
+    # Contagem por estágio (com nome)
+    stages = (
+        db.query(models.Stage)
+        .filter(models.Stage.tenant_id == tenant_id)
+        .order_by(models.Stage.order.asc())
+        .all()
+    )
+    by_stage = []
+    for st in stages:
+        count = (
+            db.query(models.Deal)
+            .filter(models.Deal.tenant_id == tenant_id, models.Deal.stage_id == st.id)
+            .count()
+        )
+        by_stage.append({"stage_id": st.id, "name": st.name, "count": count})
+
+    # Contagem por status
+    from sqlalchemy import func
+    status_rows = (
+        db.query(models.Deal.status, func.count(models.Deal.id))
+        .filter(models.Deal.tenant_id == tenant_id)
+        .group_by(models.Deal.status)
+        .all()
+    )
+    by_status = [{"status": s or "-", "count": c} for (s, c) in status_rows]
+
+    # Taxa de conversão (Ganho vs Perdido)
+    won = (
+        db.query(models.Deal)
+        .filter(models.Deal.tenant_id == tenant_id, models.Deal.status == "Ganho")
+        .count()
+    )
+    lost = (
+        db.query(models.Deal)
+        .filter(models.Deal.tenant_id == tenant_id, models.Deal.status == "Perdido")
+        .count()
+    )
+    denom = won + lost
+    win_rate = (won / denom) if denom > 0 else 0.0
+
+    return {
+        "by_stage": by_stage,
+        "by_status": by_status,
+        "conversion_rate": {"won": won, "lost": lost, "win_rate": round(win_rate, 4)},
+    }
 
 @router.get("/{deal_id}", response_model=schemas.Deal)
 def get_deal(deal_id: int, db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):
@@ -173,54 +253,3 @@ def delete_deal(
         after=None,
     )
     return None
-
-@router.get("/metrics")
-def deal_metrics(
-    db: Session = Depends(get_db),
-    tenant_id: int = Depends(get_tenant_id),
-):
-    # Contagem por estágio (com nome)
-    stages = (
-        db.query(models.Stage)
-        .filter(models.Stage.tenant_id == tenant_id)
-        .order_by(models.Stage.order.asc())
-        .all()
-    )
-    by_stage = []
-    for st in stages:
-        count = (
-            db.query(models.Deal)
-            .filter(models.Deal.tenant_id == tenant_id, models.Deal.stage_id == st.id)
-            .count()
-        )
-        by_stage.append({"stage_id": st.id, "name": st.name, "count": count})
-
-    # Contagem por status
-    from sqlalchemy import func
-    status_rows = (
-        db.query(models.Deal.status, func.count(models.Deal.id))
-        .filter(models.Deal.tenant_id == tenant_id)
-        .group_by(models.Deal.status)
-        .all()
-    )
-    by_status = [{"status": s or "-", "count": c} for (s, c) in status_rows]
-
-    # Taxa de conversão (Ganho vs Perdido)
-    won = (
-        db.query(models.Deal)
-        .filter(models.Deal.tenant_id == tenant_id, models.Deal.status == "Ganho")
-        .count()
-    )
-    lost = (
-        db.query(models.Deal)
-        .filter(models.Deal.tenant_id == tenant_id, models.Deal.status == "Perdido")
-        .count()
-    )
-    denom = won + lost
-    win_rate = (won / denom) if denom > 0 else 0.0
-
-    return {
-        "by_stage": by_stage,
-        "by_status": by_status,
-        "conversion_rate": {"won": won, "lost": lost, "win_rate": round(win_rate, 4)},
-    }

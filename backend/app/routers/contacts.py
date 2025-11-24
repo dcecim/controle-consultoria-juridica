@@ -20,8 +20,44 @@ def to_dict(obj: models.Contact) -> dict:
     return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
 
 @router.get("/", response_model=list[schemas.Contact])
-def list_contacts(db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):
-    return db.query(models.Contact).filter(models.Contact.tenant_id == tenant_id).all()
+def list_contacts(
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+    organization_id: int | None = None,
+    client_type: str | None = None,
+    lead_source: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    sort_by: str | None = None,
+    sort_dir: str = "asc",
+):
+    q = db.query(models.Contact).filter(models.Contact.tenant_id == tenant_id)
+    if organization_id is not None:
+        q = q.filter(models.Contact.organization_id == organization_id)
+    if client_type is not None:
+        q = q.filter(models.Contact.client_type == client_type)
+    if lead_source is not None:
+        q = q.filter(models.Contact.lead_source == lead_source)
+
+    allowed = {
+        "id": models.Contact.id,
+        "first_name": models.Contact.first_name,
+        "last_name": models.Contact.last_name,
+        "email": models.Contact.email,
+        "organization_id": models.Contact.organization_id,
+        "client_type": models.Contact.client_type,
+        "lead_source": models.Contact.lead_source,
+    }
+    if sort_by in allowed:
+        col = allowed[sort_by]
+        if sort_dir.lower() == "desc":
+            q = q.order_by(col.desc())
+        else:
+            q = q.order_by(col.asc())
+    else:
+        q = q.order_by(models.Contact.last_name.asc(), models.Contact.first_name.asc())
+
+    return q.offset(offset).limit(limit).all()
 
 @router.get("/{contact_id}", response_model=schemas.Contact)
 def get_contact(contact_id: int, db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):

@@ -7,6 +7,7 @@ from .database import Base, engine, log_engine_info, apply_minimal_schema_patch
 from .routers import contacts, deals, organizations, stages, tenants
 from .middleware import RequestContextMiddleware
 from .routers import lead_scores
+from .routers import documents
 
 def init_db():
     Base.metadata.create_all(bind=engine)
@@ -25,6 +26,7 @@ app.include_router(deals.router)
 app.include_router(organizations.router)
 app.include_router(stages.router)
 app.include_router(lead_scores.router)
+app.include_router(documents.router)
 
 @app.get("/", include_in_schema=False)
 def root():
