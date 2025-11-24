@@ -74,3 +74,45 @@ def list_stages(
         .order_by(models.Stage.order.asc())
         .all()
     )
+
+@router.post("/seed", response_model=list[schemas.Stage])
+def seed_stages(
+    db: Session = Depends(get_db),
+    x_tenant_id: int = Header(..., alias="X-Tenant-ID"),
+    x_actor: str = Header("system", alias="X-Actor"),
+):
+    defaults = ["Novo", "Inicial", "Em análise", "Proposta", "Negociação", "Ajuizado", "Ganho", "Perdido"]
+    existing = (
+        db.query(models.Stage)
+        .filter(models.Stage.tenant_id == x_tenant_id)
+        .order_by(models.Stage.order.asc())
+        .all()
+    )
+    existing_names = {s.name for s in existing}
+    next_order = (existing[-1].order + 1) if existing else 1
+
+    created = []
+    for name in defaults:
+        if name not in existing_names:
+            obj = models.Stage(name=name, order=next_order, tenant_id=x_tenant_id)
+            db.add(obj)
+            db.flush()
+            record_audit_event(
+                db,
+                tenant_id=x_tenant_id,
+                actor=x_actor,
+                action="CREATE",
+                entity_name="Stage",
+                entity_id=obj.id,
+                before=None,
+                after={"id": obj.id, "name": obj.name, "order": obj.order, "tenant_id": obj.tenant_id},
+            )
+            created.append(obj)
+            next_order += 1
+    db.commit()
+    return (
+        db.query(models.Stage)
+        .filter(models.Stage.tenant_id == x_tenant_id)
+        .order_by(models.Stage.order.asc())
+        .all()
+    )

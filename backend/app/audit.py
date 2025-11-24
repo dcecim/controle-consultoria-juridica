@@ -6,15 +6,6 @@ from datetime import datetime
 
 logger = logging.getLogger("audit")
 
-def _json_safe(value: Any) -> Any:
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if isinstance(value, dict):
-        return {k: _json_safe(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_json_safe(v) for v in value]
-    return value
-
 def record_audit_event(
     db: Session,
     *,
@@ -27,6 +18,15 @@ def record_audit_event(
     after: Optional[Dict[str, Any]] = None,
     details: Optional[Dict[str, Any]] = None,
 ) -> models.AuditLog:
+    def _json_safe(value: Any) -> Any:
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, dict):
+            return {k: _json_safe(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [_json_safe(v) for v in value]
+        return value
+
     entry = models.AuditLog(
         tenant_id=tenant_id,
         actor=actor,

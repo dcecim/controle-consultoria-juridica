@@ -74,6 +74,25 @@ class DealBase(BaseModel):
     docs_shared: Optional[bool] = None
 
 class DealCreate(DealBase):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "Processo trabalhista vs Montreal",
+                "value": 0.0,
+                "status": "Novo",
+                "stage_id": 2,
+                "contact_id": 3,
+                "organization_id": 1,
+                "main_issue": "Horas extras",
+                "estimated_value": 0,
+                "opened_at": "2025-11-24T13:29:39.349Z",
+                "closed_at": "2025-11-24T13:29:39.349Z",
+                "email_open_rate": 0,
+                "interactions_total": 0,
+                "docs_shared": True
+            }
+        }
+    )
     pass
 
 class DealUpdate(DealBase):

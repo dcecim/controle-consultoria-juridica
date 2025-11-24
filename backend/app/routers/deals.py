@@ -1,9 +1,12 @@
+# módulo routers/deals.py — adicionar endpoint de métricas
+
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from ..database import SessionLocal
 from .. import models, schemas
 from ..audit import record_audit_event
 
+# função deal_metrics no módulo routers/deals.py
 router = APIRouter(prefix="/deals", tags=["deals"])
 
 def get_db():
@@ -20,8 +23,26 @@ def to_dict(obj: models.Deal) -> dict:
     return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
 
 @router.get("/", response_model=list[schemas.Deal])
-def list_deals(db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):
-    return db.query(models.Deal).filter(models.Deal.tenant_id == tenant_id).all()
+def list_deals(
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+    stage_id: int | None = None,
+    contact_id: int | None = None,
+    organization_id: int | None = None,
+    status: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    q = db.query(models.Deal).filter(models.Deal.tenant_id == tenant_id)
+    if stage_id is not None:
+        q = q.filter(models.Deal.stage_id == stage_id)
+    if contact_id is not None:
+        q = q.filter(models.Deal.contact_id == contact_id)
+    if organization_id is not None:
+        q = q.filter(models.Deal.organization_id == organization_id)
+    if status is not None:
+        q = q.filter(models.Deal.status == status)
+    return q.offset(offset).limit(limit).all()
 
 @router.get("/{deal_id}", response_model=schemas.Deal)
 def get_deal(deal_id: int, db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):
@@ -41,6 +62,7 @@ def create_deal(
     tenant_id: int = Depends(get_tenant_id),
     x_actor: str = Header("system", alias="X-Actor"),
 ):
+    # Excluir None para respeitar server_default (ex.: opened_at)
     data = payload.dict(exclude_none=True)
 
     # Validação de stage_id
@@ -151,3 +173,54 @@ def delete_deal(
         after=None,
     )
     return None
+
+@router.get("/metrics")
+def deal_metrics(
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+):
+    # Contagem por estágio (com nome)
+    stages = (
+        db.query(models.Stage)
+        .filter(models.Stage.tenant_id == tenant_id)
+        .order_by(models.Stage.order.asc())
+        .all()
+    )
+    by_stage = []
+    for st in stages:
+        count = (
+            db.query(models.Deal)
+            .filter(models.Deal.tenant_id == tenant_id, models.Deal.stage_id == st.id)
+            .count()
+        )
+        by_stage.append({"stage_id": st.id, "name": st.name, "count": count})
+
+    # Contagem por status
+    from sqlalchemy import func
+    status_rows = (
+        db.query(models.Deal.status, func.count(models.Deal.id))
+        .filter(models.Deal.tenant_id == tenant_id)
+        .group_by(models.Deal.status)
+        .all()
+    )
+    by_status = [{"status": s or "-", "count": c} for (s, c) in status_rows]
+
+    # Taxa de conversão (Ganho vs Perdido)
+    won = (
+        db.query(models.Deal)
+        .filter(models.Deal.tenant_id == tenant_id, models.Deal.status == "Ganho")
+        .count()
+    )
+    lost = (
+        db.query(models.Deal)
+        .filter(models.Deal.tenant_id == tenant_id, models.Deal.status == "Perdido")
+        .count()
+    )
+    denom = won + lost
+    win_rate = (won / denom) if denom > 0 else 0.0
+
+    return {
+        "by_stage": by_stage,
+        "by_status": by_status,
+        "conversion_rate": {"won": won, "lost": lost, "win_rate": round(win_rate, 4)},
+    }
