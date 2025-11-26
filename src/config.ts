@@ -8,3 +8,14 @@ export function getHeaders() {
     "X-Actor": actor,
   };
 }
+
+export function getLocale(): string {
+  const lang = localStorage.getItem("lang") || "pt-BR";
+  if (lang === "en") return "en-US";
+  if (lang === "es") return "es-ES";
+  return "pt-BR";
+}
+
+export function getCurrency(): string {
+  return localStorage.getItem("currency") || "BRL";
+}

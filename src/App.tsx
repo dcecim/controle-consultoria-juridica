@@ -8,6 +8,7 @@ import Upload from "./pages/Upload";
 import Contacts from "./pages/Contacts";
 import Organizations from "./pages/Organizations";
 import Stages from "./pages/Stages";
+import BusinessTypes from "./pages/BusinessTypes";
 
 export default function App() {
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/organizations" element={<Organizations />} />
             <Route path="/stages" element={<Stages />} />
+            <Route path="/business-types" element={<BusinessTypes />} />
             {/* fallback para rotas desconhecidas */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

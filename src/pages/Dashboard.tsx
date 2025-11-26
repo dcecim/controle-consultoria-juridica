@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { SimpleGrid, Stat, StatLabel, StatNumber, Box, Heading, Text } from "@chakra-ui/react";
 import { getDealsMetrics } from "../lib/api";
-import { useI18n } from "../i18n";
+import { useI18n } from "../useI18n";
 
 type StageCount = { stage_id: number; name: string; count: number };
 type StatusCount = { status: string; count: number };

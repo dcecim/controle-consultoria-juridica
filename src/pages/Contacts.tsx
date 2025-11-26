@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, Select } from "@chakra-ui/react";
-import { listContacts, createContact, updateContact, deleteContact, listOrganizations } from "../lib/api";
-import { useI18n } from "../i18n";
+import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, Select, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter } from "@chakra-ui/react";
+import { MdInfoOutline } from "react-icons/md";
+import { listContacts, createContact, updateContact, deleteContact, listOrganizations, logContactFormExample } from "../lib/api";
+import { useI18n } from "../useI18n";
 
 type Contact = { id: number; first_name?: string; last_name?: string; email?: string; organization_id?: number; client_type?: string; lead_source?: string };
 type Org = { id: number; name: string };
 
 export default function Contacts() {
   const { t } = useI18n();
+  const learn = useDisclosure();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +29,7 @@ export default function Contacts() {
 
   const submit = async () => {
     try {
-      const payload: any = { ...form };
-      delete payload.id;
+      const { id: _unused, ...payload } = form; void _unused;
       if (editingId) {
         await updateContact(editingId, payload);
       } else {
@@ -36,9 +37,7 @@ export default function Contacts() {
       }
       cancel();
       load();
-    } catch (e: any) {
-      setError(String(e));
-    }
+    } catch (e) { setError(String(e)); }
   };
 
   const remove = async (id: number) => { await deleteContact(id); load(); };
@@ -52,22 +51,112 @@ export default function Contacts() {
       </HStack>
       {editingId !== null || form.id === 0 ? (
         <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200" mb={4}>
-          <Input placeholder={"Primeiro nome"} value={form.first_name ?? ""} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
-          <Input placeholder={"Sobrenome"} value={form.last_name ?? ""} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
-          <Input placeholder={"Email"} value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <Select placeholder={t("organization")} value={String(form.organization_id ?? "")} onChange={(e) => setForm({ ...form, organization_id: Number(e.target.value) || undefined })}>
-            {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </Select>
-          <Select placeholder={t("client_type")} value={form.client_type ?? ""} onChange={(e) => setForm({ ...form, client_type: e.target.value || undefined })}>
-            <option value="Pessoa Física">Pessoa Física</option>
-            <option value="Pessoa Jurídica">Pessoa Jurídica</option>
-          </Select>
-          <Select placeholder={t("lead_source")} value={form.lead_source ?? ""} onChange={(e) => setForm({ ...form, lead_source: e.target.value || undefined })}>
-            <option value="Indicação">Indicação</option>
-            <option value="Website">Website</option>
-            <option value="Redes Sociais">Redes Sociais</option>
-            <option value="Evento">Evento</option>
-          </Select>
+          <Alert status="info" borderRadius="md">
+            <AlertIcon />
+            <AlertDescription>
+              {t("contacts_form_intro")} <Link color="blue.600" onClick={learn.onOpen}>{t("learn_more")}</Link>
+            </AlertDescription>
+          </Alert>
+          <Modal isOpen={learn.isOpen} onClose={learn.onClose} isCentered>
+            <ModalOverlay />
+            <ModalContent>
+              <ModalHeader>{t("contacts_learn_more_title")}</ModalHeader>
+              <ModalCloseButton />
+              <ModalBody>
+                <VStack align="stretch" spacing={2}>
+                  <Text>{t("contact_first_name_help")}</Text>
+                  <Text>{t("contact_last_name_help")}</Text>
+                  <Text>{t("contact_email_help")}</Text>
+                  <Text>{t("contact_organization_help")}</Text>
+                  <Text>{t("client_type_help")}</Text>
+                  <Text>{t("lead_source_help")}</Text>
+                </VStack>
+              </ModalBody>
+              <ModalFooter>
+                <Button colorScheme="blue" onClick={() => {
+                  const orgId = orgs[0]?.id;
+                  setForm({ id: form.id, first_name: form.first_name || "Ana", last_name: form.last_name || "Silva", email: form.email || "ana.silva@example.com", organization_id: orgId, client_type: form.client_type || "Pessoa Física", lead_source: form.lead_source || "Indicação" });
+                  logContactFormExample("pf_indicacao", { organization_id: orgId, client_type: "Pessoa Física", lead_source: "Indicação" }).catch(() => {});
+                  learn.onClose();
+                }}>{t("contacts_apply_example_1")}</Button>
+                <Button variant="outline" ml={3} onClick={() => {
+                  const orgId = orgs[0]?.id;
+                  setForm({ id: form.id, first_name: form.first_name || "Carlos", last_name: form.last_name || "Pereira", email: form.email || "c.pereira@empresa.com", organization_id: orgId, client_type: form.client_type || "Pessoa Jurídica", lead_source: form.lead_source || "Website" });
+                  logContactFormExample("pj_site", { organization_id: orgId, client_type: "Pessoa Jurídica", lead_source: "Website" }).catch(() => {});
+                  learn.onClose();
+                }}>{t("contacts_apply_example_2")}</Button>
+                <Button variant="outline" ml={3} onClick={() => {
+                  setForm({ id: form.id, first_name: form.first_name || "Maria", last_name: form.last_name || "Gomez", email: form.email || "maria.gomez@example.org", organization_id: undefined, client_type: form.client_type || "Pessoa Física", lead_source: form.lead_source || "Evento" });
+                  logContactFormExample("pf_evento", { client_type: "Pessoa Física", lead_source: "Evento" }).catch(() => {});
+                  learn.onClose();
+                }}>{t("contacts_apply_example_3")}</Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
+          <FormControl>
+            <FormLabel display="flex" alignItems="center" gap={2}>Primeiro nome
+              <Tooltip label={t("contact_first_name_help")} placement="top" hasArrow>
+                <Icon as={MdInfoOutline} color="gray.500" cursor="help" />
+              </Tooltip>
+            </FormLabel>
+            <Input value={form.first_name ?? ""} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+            <FormHelperText>{t("contact_first_name_help")}</FormHelperText>
+          </FormControl>
+          <FormControl>
+            <FormLabel display="flex" alignItems="center" gap={2}>Sobrenome
+              <Tooltip label={t("contact_last_name_help")} placement="top" hasArrow>
+                <Icon as={MdInfoOutline} color="gray.500" cursor="help" />
+              </Tooltip>
+            </FormLabel>
+            <Input value={form.last_name ?? ""} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+            <FormHelperText>{t("contact_last_name_help")}</FormHelperText>
+          </FormControl>
+          <FormControl>
+            <FormLabel display="flex" alignItems="center" gap={2}>Email
+              <Tooltip label={t("contact_email_help")} placement="top" hasArrow>
+                <Icon as={MdInfoOutline} color="gray.500" cursor="help" />
+              </Tooltip>
+            </FormLabel>
+            <Input value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <FormHelperText>{t("contact_email_help")}</FormHelperText>
+          </FormControl>
+          <FormControl>
+            <FormLabel display="flex" alignItems="center" gap={2}>{t("organization")}
+              <Tooltip label={t("contact_organization_help")} placement="top" hasArrow>
+                <Icon as={MdInfoOutline} color="gray.500" cursor="help" />
+              </Tooltip>
+            </FormLabel>
+            <Select placeholder={t("organization")} value={String(form.organization_id ?? "")} onChange={(e) => setForm({ ...form, organization_id: Number(e.target.value) || undefined })}>
+              {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </Select>
+            <FormHelperText>{t("contact_organization_help")}</FormHelperText>
+          </FormControl>
+          <FormControl>
+            <FormLabel display="flex" alignItems="center" gap={2}>{t("client_type")}
+              <Tooltip label={t("client_type_help")} placement="top" hasArrow>
+                <Icon as={MdInfoOutline} color="gray.500" cursor="help" />
+              </Tooltip>
+            </FormLabel>
+            <Select placeholder={t("client_type")} value={form.client_type ?? ""} onChange={(e) => setForm({ ...form, client_type: e.target.value || undefined })}>
+              <option value="Pessoa Física">Pessoa Física</option>
+              <option value="Pessoa Jurídica">Pessoa Jurídica</option>
+            </Select>
+            <FormHelperText>{t("client_type_help")}</FormHelperText>
+          </FormControl>
+          <FormControl>
+            <FormLabel display="flex" alignItems="center" gap={2}>{t("lead_source")}
+              <Tooltip label={t("lead_source_help")} placement="top" hasArrow>
+                <Icon as={MdInfoOutline} color="gray.500" cursor="help" />
+              </Tooltip>
+            </FormLabel>
+            <Select placeholder={t("lead_source")} value={form.lead_source ?? ""} onChange={(e) => setForm({ ...form, lead_source: e.target.value || undefined })}>
+              <option value="Indicação">Indicação</option>
+              <option value="Website">Website</option>
+              <option value="Redes Sociais">Redes Sociais</option>
+              <option value="Evento">Evento</option>
+            </Select>
+            <FormHelperText>{t("lead_source_help")}</FormHelperText>
+          </FormControl>
           <HStack>
             <Button colorScheme="blue" onClick={submit}>{t("save")}</Button>
             <Button variant="outline" onClick={cancel}>{t("cancel")}</Button>

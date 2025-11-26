@@ -116,3 +116,23 @@ def seed_stages(
         .order_by(models.Stage.order.asc())
         .all()
     )
+
+@router.post("/example-usage")
+def log_stage_example_usage(
+    payload: schemas.DealFormExampleUsage,
+    db: Session = Depends(get_db),
+    x_tenant_id: int = Header(..., alias="X-Tenant-ID"),
+    x_actor: str = Header("system", alias="X-Actor"),
+):
+    record_audit_event(
+        db,
+        tenant_id=x_tenant_id,
+        actor=x_actor,
+        action="EXAMPLE_APPLIED",
+        entity_name="StageFormExample",
+        entity_id=payload.example_type,
+        before=None,
+        after=None,
+        details={"context": payload.context} if payload.context is not None else None,
+    )
+    return {"ok": True}

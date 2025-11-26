@@ -124,6 +124,26 @@ def deal_metrics(
         "conversion_rate": {"won": won, "lost": lost, "win_rate": round(win_rate, 4)},
     }
 
+@router.post("/example-usage", status_code=201)
+def log_example_usage(
+    payload: schemas.DealFormExampleUsage,
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+    x_actor: str = Header("system", alias="X-Actor"),
+):
+    record_audit_event(
+        db,
+        tenant_id=tenant_id,
+        actor=x_actor,
+        action="EXAMPLE_APPLIED",
+        entity_name="DealFormExample",
+        entity_id=payload.example_type,
+        before=None,
+        after=None,
+        details={"context": payload.context} if payload.context is not None else None,
+    )
+    return {"ok": True}
+
 @router.get("/{deal_id}", response_model=schemas.Deal)
 def get_deal(deal_id: int, db: Session = Depends(get_db), tenant_id: int = Depends(get_tenant_id)):
     obj = (
@@ -180,6 +200,41 @@ def create_deal(
     db.add(obj)
     db.commit()
     db.refresh(obj)
+    # Prefill: copiar obrigatórios do template da organização
+    if obj.organization_id:
+        org_rows = (
+            db.query(models.OrganizationRequiredDocument)
+            .filter(models.OrganizationRequiredDocument.organization_id == obj.organization_id, models.OrganizationRequiredDocument.tenant_id == tenant_id)
+            .all()
+        )
+        if org_rows:
+            existing = (
+                db.query(models.DealRequiredDocument)
+                .filter(models.DealRequiredDocument.deal_id == obj.id, models.DealRequiredDocument.tenant_id == tenant_id)
+                .all()
+            )
+            existing_type_ids = {r.document_type_id for r in existing}
+            for r in org_rows:
+                if r.document_type_id in existing_type_ids:
+                    continue
+                dr = models.DealRequiredDocument(
+                    tenant_id=tenant_id,
+                    deal_id=obj.id,
+                    document_type_id=r.document_type_id,
+                )
+                db.add(dr)
+                db.flush()
+                record_audit_event(
+                    db,
+                    tenant_id=tenant_id,
+                    actor=x_actor,
+                    action="REQUIRE",
+                    entity_name="DealRequiredDocument",
+                    entity_id=dr.id,
+                    before=None,
+                    after={"deal_id": obj.id, "document_type_id": r.document_type_id},
+                )
+            db.commit()
     record_audit_event(
         db,
         tenant_id=tenant_id,

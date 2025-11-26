@@ -60,6 +60,26 @@ def list_document_types(
 ):
     return db.query(models.DocumentType).filter(models.DocumentType.tenant_id == tenant_id).order_by(models.DocumentType.name.asc()).all()
 
+@router.post("/example-usage")
+def log_documents_example_usage(
+    payload: schemas.DealFormExampleUsage,
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+    x_actor: str = Header("system", alias="X-Actor"),
+):
+    record_audit_event(
+        db,
+        tenant_id=tenant_id,
+        actor=x_actor,
+        action="EXAMPLE_APPLIED",
+        entity_name="DocumentsExample",
+        entity_id=payload.example_type,
+        before=None,
+        after=None,
+        details={"context": payload.context} if payload.context is not None else None,
+    )
+    return {"ok": True}
+
 @router.post("/deals/{deal_id}/required/", response_model=list[schemas.DealRequiredDocumentRead])
 def set_required_documents_for_deal(
     deal_id: int,
@@ -150,6 +170,94 @@ def get_required_documents_for_deal(
                 required_at=r.required_at,
                 fulfilled=count > 0,
                 uploads_count=count,
+                document_type=schemas.DocumentTypeRead.model_validate(doc_type) if doc_type else None,
+            )
+        )
+    return result
+
+@router.post("/organizations/{org_id}/required/", response_model=list[schemas.OrganizationRequiredDocumentRead])
+def set_required_documents_for_organization(
+    org_id: int,
+    payload: schemas.OrganizationRequiredSet,
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+    x_actor: str = Header("system", alias="X-Actor"),
+):
+    org = (
+        db.query(models.Organization)
+        .filter(models.Organization.id == org_id, models.Organization.tenant_id == tenant_id)
+        .first()
+    )
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    types = (
+        db.query(models.DocumentType)
+        .filter(models.DocumentType.id.in_(payload.type_ids), models.DocumentType.tenant_id == tenant_id)
+        .all()
+    )
+    found_ids = {t.id for t in types}
+    missing = [tid for tid in payload.type_ids if tid not in found_ids]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Invalid document_type_id(s) for tenant: {missing}")
+
+    existing_rows = (
+        db.query(models.OrganizationRequiredDocument)
+        .filter(models.OrganizationRequiredDocument.organization_id == org_id, models.OrganizationRequiredDocument.tenant_id == tenant_id)
+        .all()
+    )
+    existing_pairs = {(r.organization_id, r.document_type_id) for r in existing_rows}
+    created = []
+    for tid in payload.type_ids:
+        pair = (org_id, tid)
+        if pair in existing_pairs:
+            continue
+        row = models.OrganizationRequiredDocument(tenant_id=tenant_id, organization_id=org_id, document_type_id=tid)
+        db.add(row)
+        db.flush()
+        record_audit_event(
+            db,
+            tenant_id=tenant_id,
+            actor=x_actor,
+            action="REQUIRE",
+            entity_name="OrganizationRequiredDocument",
+            entity_id=row.id,
+            before=None,
+            after={"organization_id": org_id, "document_type_id": tid},
+        )
+        created.append(row)
+    db.commit()
+    return get_required_documents_for_organization(org_id, db, tenant_id)
+
+@router.get("/organizations/{org_id}/required/", response_model=list[schemas.OrganizationRequiredDocumentRead])
+def get_required_documents_for_organization(
+    org_id: int,
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+):
+    org = (
+        db.query(models.Organization)
+        .filter(models.Organization.id == org_id, models.Organization.tenant_id == tenant_id)
+        .first()
+    )
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    rows = (
+        db.query(models.OrganizationRequiredDocument)
+        .filter(models.OrganizationRequiredDocument.organization_id == org_id, models.OrganizationRequiredDocument.tenant_id == tenant_id)
+        .all()
+    )
+    result = []
+    for r in rows:
+        doc_type = db.query(models.DocumentType).filter(models.DocumentType.id == r.document_type_id).first()
+        result.append(
+            schemas.OrganizationRequiredDocumentRead(
+                id=r.id,
+                tenant_id=r.tenant_id,
+                organization_id=r.organization_id,
+                document_type_id=r.document_type_id,
+                required_at=r.required_at,
                 document_type=schemas.DocumentTypeRead.model_validate(doc_type) if doc_type else None,
             )
         )

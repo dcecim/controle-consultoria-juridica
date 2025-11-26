@@ -1,16 +1,20 @@
+import React from "react";
 import { Box, Flex, HStack, Link, Text, Spacer, Select, IconButton } from "@chakra-ui/react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { MdRefresh } from "react-icons/md";
-import { useI18n } from "../i18n";
+import { useI18n } from "../useI18n";
+import { getCurrency } from "../config";
 
 export default function NavBar() {
   const location = useLocation();
   const tenantId = Number(localStorage.getItem("tenantId") || 1);
   const actor = localStorage.getItem("actor") || "admin";
   const { t, lang, setLang } = useI18n();
+  const [currency, setCurrencyState] = React.useState<string>(getCurrency());
 
   const setTenant = (v: string) => localStorage.setItem("tenantId", v);
   const setActor = (v: string) => localStorage.setItem("actor", v);
+  const setCurrency = (v: string) => { localStorage.setItem("currency", v); setCurrencyState(v); window.dispatchEvent(new Event("app:currency_changed")); };
 
   return (
     <Box bg="white" borderBottom="1px solid" borderColor="gray.200">
@@ -23,6 +27,7 @@ export default function NavBar() {
           <Link as={RouterLink} to="/contacts" fontWeight={location.pathname === "/contacts" ? "bold" : "normal"}>{t("contacts")}</Link>
           <Link as={RouterLink} to="/organizations" fontWeight={location.pathname === "/organizations" ? "bold" : "normal"}>{t("organizations")}</Link>
           <Link as={RouterLink} to="/stages" fontWeight={location.pathname === "/stages" ? "bold" : "normal"}>{t("stages")}</Link>
+          <Link as={RouterLink} to="/business-types" fontWeight={location.pathname === "/business-types" ? "bold" : "normal"}>{t("business_types") || "Tipos de Negócio"}</Link>
         </HStack>
         <Spacer />
         <HStack spacing={3}>
@@ -35,10 +40,16 @@ export default function NavBar() {
             <option value="system">system</option>
             <option value="user">user</option>
           </Select>
-          <Select size="sm" value={lang} onChange={(e) => setLang(e.target.value as "pt-BR" | "en" | "es")}>
+          <Select size="sm" value={lang} onChange={(e) => { setLang(e.target.value as "pt-BR" | "en" | "es"); window.dispatchEvent(new Event("app:lang_changed")); }}> 
             <option value="pt-BR">pt-BR</option>
             <option value="en">en</option>
             <option value="es">es</option>
+          </Select>
+          <Select size="sm" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+            <option value="BRL">BRL</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
           </Select>
           <IconButton aria-label="Atualizar" icon={<MdRefresh />} />
         </HStack>

@@ -121,6 +121,10 @@ class AuditLogRead(AuditLogBase):
     timestamp: datetime
     model_config = ConfigDict(from_attributes=True)
 
+class DealFormExampleUsage(BaseModel):
+    example_type: str
+    context: Optional[Dict[str, Any]] = None
+
 # NOVOS: LeadScore
 class LeadScoreBase(BaseModel):
     tenant_id: int
@@ -180,6 +184,18 @@ class DocumentUploadRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class DealRequiredSet(BaseModel):
+    type_ids: List[int]
+
+class OrganizationRequiredDocumentRead(BaseModel):
+    id: int
+    tenant_id: int
+    organization_id: int
+    document_type_id: int
+    required_at: datetime
+    document_type: Optional[DocumentTypeRead] = None
+    model_config = ConfigDict(from_attributes=True)
+
+class OrganizationRequiredSet(BaseModel):
     type_ids: List[int]
 
 # Definição de schema de atualização de DocumentType

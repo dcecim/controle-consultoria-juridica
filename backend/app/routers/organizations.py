@@ -145,3 +145,23 @@ def delete_organization(
         after=None,
     )
     return None
+
+@router.post("/example-usage", status_code=201)
+def log_organization_example_usage(
+    payload: schemas.DealFormExampleUsage,
+    db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_tenant_id),
+    x_actor: str = Header("system", alias="X-Actor"),
+):
+    record_audit_event(
+        db,
+        tenant_id=tenant_id,
+        actor=x_actor,
+        action="EXAMPLE_APPLIED",
+        entity_name="OrganizationFormExample",
+        entity_id=payload.example_type,
+        before=None,
+        after=None,
+        details={"context": payload.context} if payload.context is not None else None,
+    )
+    return {"ok": True}
