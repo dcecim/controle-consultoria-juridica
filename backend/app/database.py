@@ -8,8 +8,6 @@ from urllib.parse import quote
 import logging
 logger = logging.getLogger("database")
 
-load_dotenv()
-
 BASE_DIR = r"c:\Demandas\Consultor-juridico"
 DB_DIR = os.path.join(BASE_DIR, "data")
 os.makedirs(DB_DIR, exist_ok=True)

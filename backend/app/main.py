@@ -1,3 +1,4 @@
+import os
 # Startup sequence
 from .logging_config import configure_logging
 configure_logging()
@@ -8,12 +9,20 @@ from .routers import contacts, deals, organizations, stages, tenants
 from .middleware import RequestContextMiddleware
 from .routers import lead_scores
 from .routers import documents
+from fastapi.middleware.cors import CORSMiddleware
 
 def init_db():
     Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Consultoria Jurídica - CRM")
 app.middleware("http")(RequestContextMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 init_db()
 # NOVO: aplicar patch de schema para colunas novas (PostgreSQL)

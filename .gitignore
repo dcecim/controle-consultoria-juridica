@@ -1,28 +1,24 @@
-# Python / FastAPI
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# Logs
+logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Virtualenv
-.venv/
-env/
-venv/
+node_modules
+dist
+dist-ssr
+*.local
 
-# IDEs e editores
-.vscode/
-.idea/
-
-# Banco local e dados
-data/
-*.db
-
-# Cache e build
-dist/
-build/
-*.egg-info/
-.pytest_cache/
-
-# Secrets
-.env
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
