@@ -3,6 +3,7 @@ import { Box, Heading, HStack, Input, Select, Button, Text, VStack, Table, Thead
 import { MdInfoOutline } from "react-icons/md";
 import { getDocumentTypes, getDealUploads, uploadDocument, logDocumentsExample, getDeals, createDocumentType, listContacts, listOrganizations, getRequiredDocumentsForDeal, setRequiredDocumentsForDeal, getOrganizationRequiredDocuments, setOrganizationRequiredDocuments } from "../lib/api";
 import { useI18n } from "../useI18n";
+import { useAuth } from "../useAuth";
 import { useSearchParams } from "react-router-dom";
 
 type DocType = { id: number; name: string; description?: string; allowed_mime_types?: string[] };
@@ -12,6 +13,7 @@ type ContactSummary = { id: number; first_name: string; last_name: string };
 
 export default function Upload() {
   const { t } = useI18n();
+  const { canAccess } = useAuth();
   const learn = useDisclosure();
   const typeModal = useDisclosure();
   const toast = useToast();
@@ -63,7 +65,16 @@ export default function Upload() {
             setRequiredSelection((rows || []).map((r: { document_type_id: number }) => r.document_type_id));
             const total = (rows || []).length;
             const pending = (rows || []).filter((r: { fulfilled: boolean }) => !r.fulfilled).length;
-            setDealDocStatus((prev) => ({ ...prev, [dealId]: { pending, total } }));
+            setDealDocStatus((prev) => {
+              const next = { ...prev, [dealId]: { pending, total } };
+              try {
+                const tenantId = Number(localStorage.getItem("tenantId") || 1);
+                localStorage.setItem(`tenant:${tenantId}:uploads_status`, JSON.stringify(next));
+                const sum = Object.values(next).reduce((acc, v) => acc + (v?.pending || 0), 0);
+                localStorage.setItem(`tenant:${tenantId}:uploads_pending_total`, String(sum));
+              } catch (e) { void e; }
+              return next;
+            });
           })
           .catch(() => { if (!cancelled) setRequiredDocs([]); });
       }
@@ -207,7 +218,7 @@ export default function Upload() {
             <Select flex="1" placeholder={t("upload_doc_type_placeholder")} value={documentTypeId ?? ""} onChange={(e) => setDocumentTypeId(Number(e.target.value))}>
               {docTypes.map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
             </Select>
-            <Button variant="outline" onClick={typeModal.onOpen}>{t("upload_add_doc_type")}</Button>
+            {canAccess("upload","edit") && <Button variant="outline" onClick={typeModal.onOpen}>{t("upload_add_doc_type")}</Button>}
           </HStack>
           <FormHelperText>{t("upload_doc_type_help")}</FormHelperText>
         </FormControl>
@@ -241,7 +252,7 @@ export default function Upload() {
           <FormHelperText>{t("upload_notes_help")}</FormHelperText>
         </FormControl>
         <HStack>
-          <Button colorScheme="blue" onClick={onUpload}>{t("upload_button")}</Button>
+          <Button colorScheme="blue" onClick={onUpload} isDisabled={!canAccess("upload","edit")}>{t("upload_button")}</Button>
           {error && <Text color="red.500">{error}</Text>}
           {success && <Text color="green.600">{success}</Text>}
         </HStack>
@@ -288,7 +299,7 @@ export default function Upload() {
                 } catch (e: unknown) {
                   setError(e instanceof Error ? e.message : String(e));
                 }
-              }}>{t("upload_new_doc_type_save")}</Button>
+              }} isDisabled={!canAccess("upload","edit")}>{t("upload_new_doc_type_save")}</Button>
             </ModalFooter>
           </ModalContent>
         </Modal>
@@ -333,11 +344,20 @@ export default function Upload() {
               setSuccess(t("required_docs_saved"));
               const total = (rows || []).length;
               const pending = (rows || []).filter((r: { fulfilled: boolean }) => !r.fulfilled).length;
-              setDealDocStatus((prev) => ({ ...prev, [dealId]: { pending, total } }));
+              setDealDocStatus((prev) => {
+                const next = { ...prev, [dealId]: { pending, total } };
+                try {
+                  const tenantId = Number(localStorage.getItem("tenantId") || 1);
+                  localStorage.setItem(`tenant:${tenantId}:uploads_status`, JSON.stringify(next));
+                  const sum = Object.values(next).reduce((acc, v) => acc + (v?.pending || 0), 0);
+                  localStorage.setItem(`tenant:${tenantId}:uploads_pending_total`, String(sum));
+                } catch (e) { void e; }
+                return next;
+              });
             } catch (e) {
               setError(String((e as Error).message || e));
             }
-          }}>{t("required_docs_save")}</Button>
+          }} isDisabled={!canAccess("upload","edit")}>{t("required_docs_save")}</Button>
         </HStack>
       </VStack>
 
@@ -375,7 +395,14 @@ export default function Upload() {
                       const pending = rows.filter(r => !r.fulfilled).length;
                       next[id] = { pending, total };
                     });
-                    return next;
+                  try {
+                    const tenantId = Number(localStorage.getItem("tenantId") || 1);
+                    localStorage.setItem(`tenant:${tenantId}:uploads_status`, JSON.stringify(next));
+                    const sum = Object.values(next).reduce((acc, v) => acc + (v?.pending || 0), 0);
+                    localStorage.setItem(`tenant:${tenantId}:uploads_pending_total`, String(sum));
+                  } catch (e) { void e; }
+                  return next;
+                  
                   });
                 }
               } catch (e) {
@@ -404,7 +431,7 @@ export default function Upload() {
                   setError(msg);
                 }
               }
-            }}>{t("org_template_save")}</Button>
+            }} isDisabled={!canAccess("upload","edit")}>{t("org_template_save")}</Button>
               <Button variant="outline" onClick={() => {
                 // sincronizar: aplica do template para o deal se conjunto atual estiver vazio
                 if (requiredSelection.length === 0) {

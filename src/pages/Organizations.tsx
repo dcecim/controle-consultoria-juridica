@@ -3,12 +3,14 @@ import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VS
 import { MdInfoOutline } from "react-icons/md";
 import { listOrganizations, createOrganization, updateOrganization, deleteOrganization, logOrganizationFormExample, updateDeal } from "../lib/api";
 import { useI18n } from "../useI18n";
+import { useAuth } from "../useAuth";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 type Org = { id: number; name: string; sector?: string };
 
 export default function Organizations() {
   const { t } = useI18n();
+  const { canAccess } = useAuth();
   const learn = useDisclosure();
   const toast = useToast();
   const [searchParams] = useSearchParams();
@@ -90,7 +92,7 @@ export default function Organizations() {
     <Box>
       <Heading size="md" mb={4}>{t("organizations")}</Heading>
       {error && <Text color="red.500" mb={3}>{error}</Text>}
-      <HStack mb={3} spacing={3}><Button onClick={startCreate}>{t("new")}</Button></HStack>
+      <HStack mb={3} spacing={3}>{canAccess("organizations","edit") && <Button onClick={startCreate}>{t("new")}</Button>}</HStack>
       {(editingId !== null || form.id === 0) && (
         <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200" mb={4}>
           <Alert status="info" borderRadius="md">
@@ -148,7 +150,7 @@ export default function Organizations() {
             <FormHelperText>{t("organization_sector_help")}</FormHelperText>
           </FormControl>
           <HStack>
-            <Button colorScheme="blue" onClick={submit}>{t("save")}</Button>
+            <Button colorScheme="blue" onClick={submit} isDisabled={!canAccess("organizations","edit")}>{t("save")}</Button>
             <Button variant="outline" onClick={cancel}>{t("cancel")}</Button>
           </HStack>
         </VStack>
@@ -170,8 +172,8 @@ export default function Organizations() {
               <Td>{o.sector ?? "-"}</Td>
               <Td>
                 <HStack>
-                  <Button size="sm" onClick={() => startEdit(o)}>{t("edit")}</Button>
-                  <Button size="sm" colorScheme="red" onClick={() => remove(o.id)}>{t("delete")}</Button>
+                  {canAccess("organizations","edit") && <Button size="sm" onClick={() => startEdit(o)}>{t("edit")}</Button>}
+                  {canAccess("organizations","delete") && <Button size="sm" colorScheme="red" onClick={() => remove(o.id)}>{t("delete")}</Button>}
                 </HStack>
               </Td>
             </Tr>

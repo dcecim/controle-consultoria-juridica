@@ -3,12 +3,14 @@ import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VS
 import { MdInfoOutline } from "react-icons/md";
 import { listBusinessTypes, createBusinessType, updateBusinessType, deleteBusinessType, listContractTemplates, uploadContractTemplate } from "../lib/api";
 import { useI18n } from "../useI18n";
+import { useAuth } from "../useAuth";
 
 type BT = { id: number; name: string; code?: string; description?: string };
 type TemplateRow = { id: number; filename: string; locale?: string; uploaded_at?: string };
 
 export default function BusinessTypes() {
   const { t } = useI18n();
+  const { canAccess } = useAuth();
   const toast = useToast();
   const [types, setTypes] = useState<BT[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export default function BusinessTypes() {
     <Box>
       <Heading size="md" mb={4}>{t("business_types") || "Tipos de Negócio"}</Heading>
       {error && <Text color="red.500" mb={3}>{error}</Text>}
-      <HStack mb={3} spacing={3}><Button onClick={startCreate}>{t("new")}</Button></HStack>
+      <HStack mb={3} spacing={3}>{canAccess("business_types","edit") && <Button onClick={startCreate}>{t("new")}</Button>}</HStack>
       {(editingId !== null || form.id === 0) && (
         <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200" mb={4}>
           <Alert status="info" borderRadius="md">
@@ -95,7 +97,7 @@ export default function BusinessTypes() {
             <FormHelperText>{t("business_type_description_help") || "Descrição do tipo"}</FormHelperText>
           </FormControl>
           <HStack>
-            <Button colorScheme="blue" onClick={submit}>{t("save")}</Button>
+            <Button colorScheme="blue" onClick={submit} isDisabled={!canAccess("business_types","edit")}>{t("save")}</Button>
             <Button variant="outline" onClick={cancel}>{t("cancel")}</Button>
           </HStack>
         </VStack>
@@ -119,8 +121,8 @@ export default function BusinessTypes() {
               <Td>{bt.description ?? "-"}</Td>
               <Td>
                 <HStack>
-                  <Button size="sm" onClick={() => { setSelectedTypeId(bt.id); startEdit(bt); }}>{t("edit")}</Button>
-                  <Button size="sm" colorScheme="red" onClick={() => remove(bt.id)}>{t("delete")}</Button>
+                  {canAccess("business_types","edit") && <Button size="sm" onClick={() => { setSelectedTypeId(bt.id); startEdit(bt); }}>{t("edit")}</Button>}
+                  {canAccess("business_types","delete") && <Button size="sm" colorScheme="red" onClick={() => remove(bt.id)}>{t("delete")}</Button>}
                 </HStack>
               </Td>
             </Tr>
@@ -140,7 +142,7 @@ export default function BusinessTypes() {
             <option value="contract">{t("category_contract") || "Contrato"}</option>
             <option value="poa">{t("category_poa") || "Procuração"}</option>
           </Select>
-          <Button colorScheme="blue" onClick={upload} isDisabled={!selectedTypeId || !file}>{t("upload")}</Button>
+          <Button colorScheme="blue" onClick={upload} isDisabled={!selectedTypeId || !file || !canAccess("business_types","edit")}>{t("upload")}</Button>
         </HStack>
         <Table>
           <Thead>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Table, Thead, Tbody, Tr, Th, Td, Box, Heading, Select, HStack, Button, Text, VStack, Input, Checkbox, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, List, ListItem, ModalFooter, Code, useToast } from "@chakra-ui/react";
 import { MdInfoOutline } from "react-icons/md";
 import { getDeals, createDeal, updateDeal, deleteDeal, listStages, listLeadScores, computeLeadScore, logDealFormExample, listBusinessTypes, generateContractDocx, generatePowerOfAttorneyDocx, listOrganizations, getDocumentTypes, uploadDocument, getDealUploads, downloadUploadFile, listContacts } from "../lib/api";
+import { useAuth } from "../useAuth";
 import type { LeadScoreRead } from "../lib/api";
 import { useI18n } from "../useI18n";
 import { getLocale, getCurrency } from "../config";
@@ -40,6 +41,7 @@ export default function Deals() {
   const [orgs, setOrgs] = useState<{ id: number; name: string; sector?: string }[]>([]);
   const [contacts, setContacts] = useState<Array<{ id: number; first_name?: string; last_name?: string; email?: string; organization_id?: number; client_type?: string }>>([]);
   const [dealContactId, setDealContactId] = useState<number | null>(null);
+  const { canAccess } = useAuth();
   const varsPreview = useDisclosure();
   const toast = useToast();
   const [lastContract, setLastContract] = useState<{ id: number; original_filename: string; uploaded_at?: string } | null>(null);
@@ -56,7 +58,15 @@ export default function Deals() {
 
   const load = useCallback(() => {
     getDeals({ limit, offset, sort_by: sortBy, sort_dir: sortDir })
-      .then(setDeals)
+      .then((rows) => {
+        const arr = rows || [];
+        setDeals(arr);
+        try {
+          const tenantId = Number(localStorage.getItem("tenantId") || 1);
+          const missingOrg = arr.filter(d => !d.organization_id).length;
+          localStorage.setItem(`tenant:${tenantId}:deals_missing_org_total`, String(missingOrg));
+        } catch (e) { void e; }
+      })
       .catch((e) => setError(String(e)));
     listStages().then((arr) => {
       setStages(arr);
@@ -113,7 +123,7 @@ export default function Deals() {
 
   const submit = async () => {
     try {
-      const payload = { ...form };
+      const payload = { ...form, contact_id: dealContactId ?? undefined } as import("../lib/api").DealPayload;
       if (editingId) {
         await updateDeal(editingId, payload);
       } else {
@@ -236,7 +246,7 @@ export default function Deals() {
     <Box>
       <Heading size="md" mb={4}>{t("deals")}</Heading>
       {error && <Text color="red.500" mb={4}>{error}</Text>}
-      <HStack mb={3}><Button onClick={startCreate}>{t("new")}</Button></HStack>
+      <HStack mb={3}>{canAccess("deals","edit") && <Button onClick={startCreate}>{t("new")}</Button>}</HStack>
       <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200" mb={4}>
         <Alert status="info" borderRadius="md">
           <AlertIcon />
@@ -436,10 +446,10 @@ export default function Deals() {
           <FormHelperText>{t("docs_shared_help")}</FormHelperText>
         </FormControl>
         <HStack>
-          <Button colorScheme="blue" onClick={submit}>{editingId ? t("save") : t("new")}</Button>
+          <Button colorScheme="blue" onClick={submit} isDisabled={!canAccess("deals","edit")}>{editingId ? t("save") : t("new")}</Button>
           {editingId && <Button variant="outline" onClick={cancel}>{t("cancel")}</Button>}
-          {editingId && <Button onClick={generateContract} isDisabled={!form["business_type_id"]}>{t("generate_contract") || "Gerar contrato"}</Button>}
-          {editingId && <Button onClick={async () => {
+          {editingId && canAccess("deals","edit") && <Button onClick={generateContract} isDisabled={!form["business_type_id"]}>{t("generate_contract") || "Gerar contrato"}</Button>}
+          {editingId && canAccess("deals","edit") && <Button onClick={async () => {
             if (!editingId) return;
             try {
               const blob = await generatePowerOfAttorneyDocx(editingId);
@@ -479,7 +489,7 @@ export default function Deals() {
             a.click();
             document.body.removeChild(a);
           }}>Baixar contrato gerado agora</Button>}
-          {editingId && <Button variant="outline" onClick={varsPreview.onOpen}>{t("view_details") || "Ver variáveis"}</Button>}
+        {editingId && <Button variant="outline" onClick={varsPreview.onOpen}>{t("view_details") || "Ver variáveis"}</Button>}
         </HStack>
         {(() => {
           const d = deals.find(x => x.id === editingId);
@@ -597,10 +607,10 @@ export default function Deals() {
               <Td>{d.opened_at ? new Date(d.opened_at).toLocaleString() : "-"}</Td>
               <Td>
                 <HStack>
-                  <Button size="sm" onClick={() => startEdit(d)}>{t("edit")}</Button>
-                  <Button size="sm" colorScheme="red" onClick={() => remove(d.id)}>{t("delete")}</Button>
+                  {canAccess("deals","edit") && <Button size="sm" onClick={() => startEdit(d)}>{t("edit")}</Button>}
+                  {canAccess("deals","delete") && <Button size="sm" colorScheme="red" onClick={() => remove(d.id)}>{t("delete")}</Button>}
                   <Button size="sm" onClick={() => viewScores(d.id)}>{t("view_scores")}</Button>
-                  <Button size="sm" colorScheme="purple" onClick={() => compute(d.id)}>{t("compute_score")}</Button>
+                  {canAccess("deals","edit") && <Button size="sm" colorScheme="purple" onClick={() => compute(d.id)}>{t("compute_score")}</Button>}
                 </HStack>
               </Td>
             </Tr>

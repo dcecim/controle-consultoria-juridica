@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { ChakraProvider } from "@chakra-ui/react";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { AuthProvider } from "./AuthProvider";
 import ErrorBoundary from "./ErrorBoundary";
 import { I18nProvider } from "./i18n";
 
@@ -14,7 +15,9 @@ ReactDOM.createRoot(rootEl!).render(
       <I18nProvider>
         <ChakraProvider>
           <BrowserRouter>
-            <App />
+            <AuthProvider>
+              <App />
+            </AuthProvider>
           </BrowserRouter>
         </ChakraProvider>
       </I18nProvider>

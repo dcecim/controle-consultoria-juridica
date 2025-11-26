@@ -3,12 +3,14 @@ import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VS
 import { MdInfoOutline } from "react-icons/md";
 import { listContacts, createContact, updateContact, deleteContact, listOrganizations, logContactFormExample } from "../lib/api";
 import { useI18n } from "../useI18n";
+import { useAuth } from "../useAuth";
 
 type Contact = { id: number; first_name?: string; last_name?: string; email?: string; organization_id?: number; client_type?: string; lead_source?: string };
 type Org = { id: number; name: string };
 
 export default function Contacts() {
   const { t } = useI18n();
+  const { canAccess } = useAuth();
   const learn = useDisclosure();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
@@ -17,7 +19,19 @@ export default function Contacts() {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const load = () => {
-    listContacts({ limit: 50, sort_by: "last_name", sort_dir: "asc" }).then(setContacts).catch((e) => setError(String(e)));
+    listContacts({ limit: 50, sort_by: "last_name", sort_dir: "asc" }).then((rows) => {
+      const arr = rows || [];
+      setContacts(arr);
+      try {
+        const tenantId = Number(localStorage.getItem("tenantId") || 1);
+        const missing = arr.filter(c => {
+          const email = (c.email || "").trim();
+          const ok = /.+@.+\..+/.test(email);
+          return !email || !ok;
+        }).length;
+        localStorage.setItem(`tenant:${tenantId}:contacts_missing_email_total`, String(missing));
+      } catch (e) { void e; }
+    }).catch((e) => setError(String(e)));
     listOrganizations({ limit: 100 }).then(setOrgs).catch(() => {});
   };
 
@@ -47,7 +61,7 @@ export default function Contacts() {
       <Heading size="md" mb={4}>{t("contacts")}</Heading>
       {error && <Text color="red.500" mb={3}>{error}</Text>}
       <HStack mb={3} spacing={3}>
-        <Button onClick={startCreate}>{t("new")}</Button>
+        {canAccess("contacts","edit") && <Button onClick={startCreate}>{t("new")}</Button>}
       </HStack>
       {editingId !== null || form.id === 0 ? (
         <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200" mb={4}>
@@ -158,7 +172,7 @@ export default function Contacts() {
             <FormHelperText>{t("lead_source_help")}</FormHelperText>
           </FormControl>
           <HStack>
-            <Button colorScheme="blue" onClick={submit}>{t("save")}</Button>
+            <Button colorScheme="blue" onClick={submit} isDisabled={!canAccess("contacts","edit")}>{t("save")}</Button>
             <Button variant="outline" onClick={cancel}>{t("cancel")}</Button>
           </HStack>
         </VStack>
@@ -182,8 +196,8 @@ export default function Contacts() {
               <Td>{c.organization_id ?? "-"}</Td>
               <Td>
                 <HStack>
-                  <Button size="sm" onClick={() => startEdit(c)}>{t("edit")}</Button>
-                  <Button size="sm" colorScheme="red" onClick={() => remove(c.id)}>{t("delete")}</Button>
+                  {canAccess("contacts","edit") && <Button size="sm" onClick={() => startEdit(c)}>{t("edit")}</Button>}
+                  {canAccess("contacts","delete") && <Button size="sm" colorScheme="red" onClick={() => remove(c.id)}>{t("delete")}</Button>}
                 </HStack>
               </Td>
             </Tr>
