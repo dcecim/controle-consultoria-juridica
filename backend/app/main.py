@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from .database import Base, engine, log_engine_info, apply_minimal_schema_patch
 from .routers import contacts, deals, organizations, stages, tenants
+from .routers import auth, rbac
 from .middleware import RequestContextMiddleware
 from .routers import lead_scores
 from .routers import documents
@@ -16,9 +17,11 @@ def init_db():
 
 app = FastAPI(title="Consultoria Jurídica - CRM")
 app.middleware("http")(RequestContextMiddleware)
+origins_env = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
+allow_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,6 +39,8 @@ app.include_router(organizations.router)
 app.include_router(stages.router)
 app.include_router(lead_scores.router)
 app.include_router(documents.router)
+app.include_router(auth.router)
+app.include_router(rbac.router)
 
 @app.get("/", include_in_schema=False)
 def root():

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, Select, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter } from "@chakra-ui/react";
+import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, Select, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter, useColorModeValue } from "@chakra-ui/react";
 import { MdInfoOutline } from "react-icons/md";
 import { listContacts, createContact, updateContact, deleteContact, listOrganizations, logContactFormExample } from "../lib/api";
 import { useI18n } from "../useI18n";
@@ -24,7 +24,7 @@ export default function Contacts() {
       setContacts(arr);
       try {
         const tenantId = Number(localStorage.getItem("tenantId") || 1);
-        const missing = arr.filter(c => {
+        const missing = arr.filter((c: Contact) => {
           const email = (c.email || "").trim();
           const ok = /.+@.+\..+/.test(email);
           return !email || !ok;
@@ -56,6 +56,10 @@ export default function Contacts() {
 
   const remove = async (id: number) => { await deleteContact(id); load(); };
 
+  const bgPanel = useColorModeValue("white","gray.800");
+  const borderPanel = useColorModeValue("gray.200","gray.700");
+  const tableBg = useColorModeValue("white","gray.800");
+
   return (
     <Box>
       <Heading size="md" mb={4}>{t("contacts")}</Heading>
@@ -64,7 +68,7 @@ export default function Contacts() {
         {canAccess("contacts","edit") && <Button onClick={startCreate}>{t("new")}</Button>}
       </HStack>
       {editingId !== null || form.id === 0 ? (
-        <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200" mb={4}>
+        <VStack align="stretch" spacing={3} bg={bgPanel} p={4} borderRadius="md" border="1px solid" borderColor={borderPanel} mb={4}>
           <Alert status="info" borderRadius="md">
             <AlertIcon />
             <AlertDescription>
@@ -177,7 +181,7 @@ export default function Contacts() {
           </HStack>
         </VStack>
       ) : null}
-      <Table bg="white">
+      <Table bg={tableBg}>
         <Thead>
           <Tr>
             <Th>{t("id")}</Th>

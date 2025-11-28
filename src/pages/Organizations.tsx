@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter, useToast } from "@chakra-ui/react";
+import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter, useToast, useColorModeValue } from "@chakra-ui/react";
 import { MdInfoOutline } from "react-icons/md";
 import { listOrganizations, createOrganization, updateOrganization, deleteOrganization, logOrganizationFormExample, updateDeal } from "../lib/api";
 import { useI18n } from "../useI18n";
@@ -19,6 +19,10 @@ export default function Organizations() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<Org>({ id: 0, name: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  const panelBg = useColorModeValue("white","gray.800");
+  const panelBorder = useColorModeValue("gray.200","gray.700");
+  const tableBg = useColorModeValue("white","gray.800");
 
   const load = () => { listOrganizations({ limit: 100, sort_by: "name", sort_dir: "asc" }).then(setOrgs).catch((e) => setError(String(e))); };
   useEffect(() => { load(); }, []);
@@ -94,7 +98,7 @@ export default function Organizations() {
       {error && <Text color="red.500" mb={3}>{error}</Text>}
       <HStack mb={3} spacing={3}>{canAccess("organizations","edit") && <Button onClick={startCreate}>{t("new")}</Button>}</HStack>
       {(editingId !== null || form.id === 0) && (
-        <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200" mb={4}>
+        <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder} mb={4}>
           <Alert status="info" borderRadius="md">
             <AlertIcon />
             <AlertDescription>
@@ -155,7 +159,7 @@ export default function Organizations() {
           </HStack>
         </VStack>
       )}
-      <Table bg="white">
+      <Table bg={tableBg}> 
         <Thead>
           <Tr>
             <Th>{t("id")}</Th>

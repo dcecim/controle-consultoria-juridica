@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Table, Thead, Tbody, Tr, Th, Td, Box, Heading, Select, HStack, Button, Text, VStack, Input, Checkbox, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, List, ListItem, ModalFooter, Code, useToast } from "@chakra-ui/react";
+import { Table, Thead, Tbody, Tr, Th, Td, Box, Heading, Select, HStack, Button, Text, VStack, Input, Checkbox, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, List, ListItem, ModalFooter, Code, useToast, useColorModeValue } from "@chakra-ui/react";
 import { MdInfoOutline } from "react-icons/md";
 import { getDeals, createDeal, updateDeal, deleteDeal, listStages, listLeadScores, computeLeadScore, logDealFormExample, listBusinessTypes, generateContractDocx, generatePowerOfAttorneyDocx, listOrganizations, getDocumentTypes, uploadDocument, getDealUploads, downloadUploadFile, listContacts } from "../lib/api";
 import { useAuth } from "../useAuth";
@@ -63,7 +63,7 @@ export default function Deals() {
         setDeals(arr);
         try {
           const tenantId = Number(localStorage.getItem("tenantId") || 1);
-          const missingOrg = arr.filter(d => !d.organization_id).length;
+          const missingOrg = arr.filter((d: Deal) => !d.organization_id).length;
           localStorage.setItem(`tenant:${tenantId}:deals_missing_org_total`, String(missingOrg));
         } catch (e) { void e; }
       })
@@ -179,6 +179,10 @@ export default function Deals() {
 
   const remove = async (id: number) => { await deleteDeal(id); load(); };
 
+  const panelBg = useColorModeValue("white","gray.800");
+  const panelBorder = useColorModeValue("gray.200","gray.700");
+  const tableBg = useColorModeValue("white","gray.800");
+
   const viewScores = async (id: number) => {
     setSelectedDealId(id);
     try {
@@ -247,7 +251,7 @@ export default function Deals() {
       <Heading size="md" mb={4}>{t("deals")}</Heading>
       {error && <Text color="red.500" mb={4}>{error}</Text>}
       <HStack mb={3}>{canAccess("deals","edit") && <Button onClick={startCreate}>{t("new")}</Button>}</HStack>
-      <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200" mb={4}>
+      <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder} mb={4}>
         <Alert status="info" borderRadius="md">
           <AlertIcon />
           <AlertDescription>
@@ -510,8 +514,8 @@ export default function Deals() {
           );
         })()}
         {editingId && (
-          <Box mt={3} p={3} border="1px solid" borderColor="gray.200" borderRadius="md">
-            <Heading size="sm" mb={2}>Último contrato gerado</Heading>
+          <Box mt={3} p={3} border="1px solid" borderColor={panelBorder} borderRadius="md" bg={panelBg}>
+          <Heading size="sm" mb={2}>Último contrato gerado</Heading>
             {lastContract ? (
               <HStack justify="space-between">
                 <Text>{lastContract.original_filename} {lastContract.uploaded_at ? `- ${new Date(lastContract.uploaded_at).toLocaleString()}` : ""}</Text>
@@ -576,7 +580,7 @@ export default function Deals() {
         <Button onClick={() => setOffset(Math.max(0, offset - limit))}>Anterior</Button>
         <Button onClick={() => setOffset(offset + limit)}>Próximo</Button>
       </HStack>
-      <Table bg="white">
+      <Table bg={tableBg}>
         <Thead>
           <Tr>
             <Th>{t("id")}</Th>
@@ -618,7 +622,7 @@ export default function Deals() {
         </Tbody>
       </Table>
       {selectedDealId && (
-        <Box mt={4} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200">
+        <Box mt={4} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder}>
           <Heading size="sm" mb={2}>{t("scores")} #{selectedDealId}</Heading>
           {scores.length === 0 ? (
             <Text color="gray.600">-</Text>

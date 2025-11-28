@@ -13,11 +13,20 @@ def get_db():
     finally:
         db.close()
 
+def get_tenant_id(x_tenant_id: int | None = Header(default=None, alias="X-Tenant-ID")) -> int:
+    try:
+        import os
+        if x_tenant_id is None:
+            return int(os.getenv("TENANT_ID", "1"))
+        return int(x_tenant_id)
+    except Exception:
+        return 1
+
 @router.post("", response_model=schemas.Stage)
 def create_stage(
     stage: schemas.StageCreate,
     db: Session = Depends(get_db),
-    x_tenant_id: int = Header(..., alias="X-Tenant-ID"),
+    x_tenant_id: int = Depends(get_tenant_id),
     x_actor: str = Header("system", alias="X-Actor"),
 ):
     obj = models.Stage(name=stage.name, order=stage.order, tenant_id=x_tenant_id)
@@ -40,7 +49,7 @@ def create_stage(
 def delete_stage(
     stage_id: int,
     db: Session = Depends(get_db),
-    x_tenant_id: int = Header(..., alias="X-Tenant-ID"),
+    x_tenant_id: int = Depends(get_tenant_id),
     x_actor: str = Header("system", alias="X-Actor"),
 ):
     obj = db.query(models.Stage).filter(
@@ -66,7 +75,7 @@ def delete_stage(
 @router.get("/", response_model=list[schemas.Stage])
 def list_stages(
     db: Session = Depends(get_db),
-    x_tenant_id: int = Header(..., alias="X-Tenant-ID"),
+    x_tenant_id: int = Depends(get_tenant_id),
 ):
     return (
         db.query(models.Stage)
@@ -78,7 +87,7 @@ def list_stages(
 @router.post("/seed", response_model=list[schemas.Stage])
 def seed_stages(
     db: Session = Depends(get_db),
-    x_tenant_id: int = Header(..., alias="X-Tenant-ID"),
+    x_tenant_id: int = Depends(get_tenant_id),
     x_actor: str = Header("system", alias="X-Actor"),
 ):
     defaults = ["Novo", "Inicial", "Em análise", "Proposta", "Negociação", "Ajuizado", "Ganho", "Perdido"]

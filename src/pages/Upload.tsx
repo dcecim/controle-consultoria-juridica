@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Heading, HStack, Input, Select, Button, Text, VStack, Table, Thead, Tbody, Tr, Th, Td, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter, Checkbox, useToast } from "@chakra-ui/react";
+import { Box, Heading, HStack, Input, Select, Button, Text, VStack, Table, Thead, Tbody, Tr, Th, Td, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter, Checkbox, useToast, useColorModeValue } from "@chakra-ui/react";
 import { MdInfoOutline } from "react-icons/md";
 import { getDocumentTypes, getDealUploads, uploadDocument, logDocumentsExample, getDeals, createDocumentType, listContacts, listOrganizations, getRequiredDocumentsForDeal, setRequiredDocumentsForDeal, getOrganizationRequiredDocuments, setOrganizationRequiredDocuments } from "../lib/api";
 import { useI18n } from "../useI18n";
@@ -35,6 +35,10 @@ export default function Upload() {
   const [requiredSelection, setRequiredSelection] = useState<number[]>([]);
   const [orgRequiredSelection, setOrgRequiredSelection] = useState<number[]>([]);
   const [dealDocStatus, setDealDocStatus] = useState<Record<number, { pending: number; total: number }>>({});
+
+  const panelBg = useColorModeValue("white","gray.800");
+  const panelBorder = useColorModeValue("gray.200","gray.700");
+  const tableBg = useColorModeValue("white","gray.800");
 
   useEffect(() => {
     getDocumentTypes().then(setDocTypes).catch((e) => setError(String(e)));
@@ -155,7 +159,7 @@ export default function Upload() {
   return (
     <Box>
       <Heading size="md" mb={4}>{t("upload")}</Heading>
-      <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200">
+      <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder}>
         <Alert status="info" borderRadius="md">
           <AlertIcon />
           <AlertDescription>
@@ -306,7 +310,7 @@ export default function Upload() {
       </VStack>
 
       <Heading size="sm" mt={6} mb={3}>{t("required_docs_title")}</Heading>
-      <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200">
+      <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder}>
         <Table>
           <Thead>
             <Tr>
@@ -364,7 +368,7 @@ export default function Upload() {
       {deals.find(d => d.id === dealId)?.organization_id ? (
         <>
           <Heading size="sm" mt={6} mb={3}>{t("org_template_title")}</Heading>
-          <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200">
+          <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder}>
             <Heading size="xs" mt={0}>{t("org_template_manage")}</Heading>
             <VStack align="stretch">
               {docTypes.map(dt => (
@@ -445,7 +449,7 @@ export default function Upload() {
       ) : null}
 
       <Heading size="sm" mt={6} mb={3}>{t("uploads_for_deal")}</Heading>
-      <Table bg="white">
+      <Table bg={tableBg}>
         <Thead>
           <Tr>
               <Th>ID</Th>

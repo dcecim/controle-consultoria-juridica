@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Select, useToast } from "@chakra-ui/react";
+import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Select, useToast, useColorModeValue } from "@chakra-ui/react";
 import { MdInfoOutline } from "react-icons/md";
 import { listBusinessTypes, createBusinessType, updateBusinessType, deleteBusinessType, listContractTemplates, uploadContractTemplate } from "../lib/api";
 import { useI18n } from "../useI18n";
@@ -21,6 +21,10 @@ export default function BusinessTypes() {
   const [file, setFile] = useState<File | null>(null);
   const [locale, setLocale] = useState<string>("");
   const [category, setCategory] = useState<"contract" | "poa" | "">("");
+
+  const panelBg = useColorModeValue("white","gray.800");
+  const panelBorder = useColorModeValue("gray.200","gray.700");
+  const tableBg = useColorModeValue("white","gray.800");
 
   const loadTypes = () => { listBusinessTypes({ limit: 100, sort_by: "name", sort_dir: "asc" }).then(setTypes).catch((e) => setError(String(e))); };
   const loadTemplates = (btId: number) => { listContractTemplates({ business_type_id: btId }).then(setTemplates).catch(() => setTemplates([])); };
@@ -62,7 +66,7 @@ export default function BusinessTypes() {
       {error && <Text color="red.500" mb={3}>{error}</Text>}
       <HStack mb={3} spacing={3}>{canAccess("business_types","edit") && <Button onClick={startCreate}>{t("new")}</Button>}</HStack>
       {(editingId !== null || form.id === 0) && (
-        <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200" mb={4}>
+        <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder} mb={4}>
           <Alert status="info" borderRadius="md">
             <AlertIcon />
             <AlertDescription>
@@ -102,7 +106,7 @@ export default function BusinessTypes() {
           </HStack>
         </VStack>
       )}
-      <Table bg="white" mb={6}>
+      <Table bg={tableBg} mb={6}>
         <Thead>
           <Tr>
             <Th>{t("id")}</Th>
@@ -131,7 +135,7 @@ export default function BusinessTypes() {
       </Table>
 
       <Heading size="sm" mb={2}>{t("contract_templates") || "Modelos de Contrato"}</Heading>
-      <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200">
+      <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder}>
         <HStack>
           <Select placeholder={t("business_types") || "Tipos de Negócio"} value={String(selectedTypeId ?? "")} onChange={(e) => setSelectedTypeId(Number(e.target.value) || null)} maxW="320px">
             {types.map(bt => <option key={bt.id} value={bt.id}>{bt.name}</option>)}

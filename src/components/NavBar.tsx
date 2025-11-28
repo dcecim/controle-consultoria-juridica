@@ -1,11 +1,12 @@
 import React from "react";
-import { Box, VStack, Text, Select, IconButton, Button, Divider, Icon, Tooltip, Badge } from "@chakra-ui/react";
+import { Box, VStack, Text, Select, IconButton, Button, Divider, Icon, Tooltip, Badge, useColorModeValue } from "@chakra-ui/react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { MdRefresh, MdDashboard, MdList, MdUpload, MdContacts, MdBusiness, MdTimeline, MdCategory, MdAdminPanelSettings, MdPeople } from "react-icons/md";
+import { MdHomeWork } from "react-icons/md";
 import { useI18n } from "../useI18n";
+import { listTenants } from "../lib/api";
 import { getCurrency } from "../config";
 import { useAuth } from "../useAuth";
-import { listTenants, type TenantRow } from "../lib/api";
 
 export default function NavBar() {
   const location = useLocation();
@@ -13,35 +14,35 @@ export default function NavBar() {
   const { t, lang, setLang } = useI18n();
   const { role, logout, canAccess } = useAuth();
   const [currency, setCurrencyState] = React.useState<string>(getCurrency());
-  const [tenants, setTenants] = React.useState<TenantRow[]>([]);
+  const [tenants, setTenants] = React.useState<Array<{ id: number; name: string }>>([]);
+  const [tenant, setTenant] = React.useState<number>(tenantId);
+  
   const pendingUploads = Number(localStorage.getItem(`tenant:${tenantId}:uploads_pending_total`) || 0);
   const contactsMissingEmail = Number(localStorage.getItem(`tenant:${tenantId}:contacts_missing_email_total`) || 0);
   const dealsMissingOrg = Number(localStorage.getItem(`tenant:${tenantId}:deals_missing_org_total`) || 0);
 
-  const setTenant = (v: string) => localStorage.setItem("tenantId", v);
+  
   const setCurrency = (v: string) => { localStorage.setItem("currency", v); setCurrencyState(v); window.dispatchEvent(new Event("app:currency_changed")); };
 
+  
   React.useEffect(() => {
-    const allowed = role === "Master" || role === "Projetista";
     listTenants().then((rows) => {
-      const list = rows || [];
-      if (allowed) {
-        setTenants(list);
-      } else {
-        const cur = Number(localStorage.getItem("tenantId") || 1);
-        const found = list.find((t) => t.id === cur);
-        setTenants(found ? [found] : [{ id: cur, name: `Tenant ${cur}` }]);
+      setTenants(rows);
+      if (!rows.find(r => r.id === tenant)) {
+        const next = rows[0]?.id || 1;
+        setTenant(next);
+        localStorage.setItem("tenantId", String(next));
+        window.dispatchEvent(new Event("tenant:changed"));
       }
-    }).catch(() => {
-      const cur = Number(localStorage.getItem("tenantId") || 1);
-      const fallback = [{ id: 1, name: "Tenant 1" }, { id: 2, name: "Tenant 2" }];
-      const allowed2 = role === "Master" || role === "Projetista";
-      setTenants(allowed2 ? fallback : fallback.filter(t => t.id === cur));
-    });
-  }, [role]);
+    }).catch(() => {});
+  }, [tenant]);
 
+  const sideBg = useColorModeValue("white", "gray.800");
+  const sideBorder = useColorModeValue("gray.200", "gray.700");
+  const themeName = (localStorage.getItem("themeName") || "light");
+  const setThemeName = (name: string) => { localStorage.setItem("themeName", name); window.dispatchEvent(new Event("theme:change")); };
   return (
-    <Box bg="white" borderRight="1px solid" borderColor="gray.200" minH="100vh" w="260px" position="sticky" top={0}>
+    <Box bg={sideBg} borderRight="1px solid" borderColor={sideBorder} minH="100vh" w="260px" position="sticky" top={0}>
       <VStack align="stretch" spacing={3} px={4} py={4}>
         <Text fontWeight="bold" fontSize="lg">Consultor Jurídico</Text>
         <Divider />
@@ -101,26 +102,36 @@ export default function NavBar() {
           </Tooltip>
         )}
         {canAccess("profiles_admin") && (
+          <Tooltip label={"Empresa"} placement="right" hasArrow>
+            <Button as={RouterLink} to="/tenant" leftIcon={<Icon as={MdHomeWork} />} variant={location.pathname === "/tenant" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/tenant" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>Empresa</Button>
+          </Tooltip>
+        )}
+        {canAccess("profiles_admin") && (
           <Tooltip label={t("users") || "Usuários"} placement="right" hasArrow>
             <Button as={RouterLink} to="/users" leftIcon={<Icon as={MdPeople} />} variant={location.pathname === "/users" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/users" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("users") || "Usuários"}</Button>
           </Tooltip>
         )}
         <Divider />
-        <Select size="sm" value={String(tenantId)} onChange={(e) => setTenant(e.target.value)} isDisabled={!(role === "Master" || role === "Projetista")}> 
-          {tenants.map(ti => (
-            <option key={ti.id} value={String(ti.id)}>{ti.name}</option>
-          ))}
-        </Select>
+        
         <Select size="sm" value={lang} onChange={(e) => { setLang(e.target.value as "pt-BR" | "en" | "es"); window.dispatchEvent(new Event("app:lang_changed")); }}> 
           <option value="pt-BR">pt-BR</option>
           <option value="en">en</option>
           <option value="es">es</option>
+        </Select>
+        <Select size="sm" value={String(tenant)} onChange={(e) => { const next = Number(e.target.value); setTenant(next); localStorage.setItem("tenantId", String(next)); window.dispatchEvent(new Event("tenant:changed")); }}>
+          {tenants.map((tnt) => (<option key={tnt.id} value={String(tnt.id)}>{tnt.name || `Tenant ${tnt.id}`}</option>))}
         </Select>
         <Select size="sm" value={currency} onChange={(e) => setCurrency(e.target.value)}>
           <option value="BRL">BRL</option>
           <option value="USD">USD</option>
           <option value="EUR">EUR</option>
           <option value="GBP">GBP</option>
+        </Select>
+        <Select size="sm" value={themeName} onChange={(e) => setThemeName(e.target.value)}>
+          <option value="light">Claro</option>
+          <option value="dark">Escuro</option>
+          <option value="sepia">Sépia</option>
+          <option value="ocean">Oceano</option>
         </Select>
         <Text>Perfil: {role || "Guest"}</Text>
         {!localStorage.getItem("token") && <Button size="sm" as={RouterLink} to="/login">{t("login") || "Login"}</Button>}

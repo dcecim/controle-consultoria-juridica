@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Select, Checkbox, Button, Text, HStack, Input, FormControl, FormLabel } from "@chakra-ui/react";
+import { Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Select, Checkbox, Button, Text, HStack, Input, FormControl, FormLabel, useColorModeValue } from "@chakra-ui/react";
 import { useI18n } from "../useI18n";
 import { getRolePermissions, setRolePermissions, listProfiles, createProfile, deleteProfile, syncRBACFromLocalToServer } from "../lib/api";
 
@@ -16,19 +16,20 @@ export default function Profiles() {
   const features: Feature[] = useMemo(() => ["dashboard", "deals", "upload", "contacts", "organizations", "stages", "business_types", "profiles_admin"], []);
   const defaultPerms: Record<Feature, Action[]> = useMemo(() => ({
     dashboard: ["view"],
-    deals: ["view", "edit", "delete"],
-    upload: ["view", "edit"],
-    contacts: ["view", "edit", "delete"],
-    organizations: ["view", "edit", "delete"],
-    stages: ["view", "edit", "delete"],
-    business_types: ["view", "edit", "delete"],
-    profiles_admin: ["view", "edit"],
+    deals: ["view"],
+    upload: [],
+    contacts: [],
+    organizations: [],
+    stages: [],
+    business_types: [],
+    profiles_admin: [],
   }), []);
   const calcPerms = (r: Role): Record<Feature, Action[]> => {
     if (r === "Master" || r === "Projetista") {
       return Object.fromEntries(features.map(f => [f, [...ALL_ACTIONS]])) as Record<Feature, Action[]>;
     }
-    const raw = localStorage.getItem(`role:${r}:permissions`);
+    const tenantId = Number(localStorage.getItem("tenantId") || 1);
+    const raw = localStorage.getItem(`tenant:${tenantId}:role:${r}:permissions`);
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as Record<string, string[]>;
@@ -40,6 +41,10 @@ export default function Profiles() {
   const [perms, setPerms] = useState<Record<Feature, Action[]>>(() => calcPerms(role));
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const panelBg = useColorModeValue("white","gray.800");
+  const panelBorder = useColorModeValue("gray.200","gray.700");
+  const tableBg = useColorModeValue("white","gray.800");
 
   useEffect(() => { /* noop to satisfy hook rules */ }, []);
 
@@ -80,6 +85,8 @@ export default function Profiles() {
       const toSave: Record<string, string[]> = {};
       features.forEach(f => { toSave[f] = perms[f] as string[]; });
       await setRolePermissions(role, toSave);
+      const tenantId = Number(localStorage.getItem("tenantId") || 1);
+      localStorage.setItem(`tenant:${tenantId}:role:${role}:permissions`, JSON.stringify(toSave));
       setSuccess(t("save") || "Salvo");
     } catch (e) {
       setError(String(e));
@@ -109,7 +116,7 @@ export default function Profiles() {
         <option value="Comercial">Comercial</option>
         <option value="Guest">Guest</option>
       </Select>
-      <Box bg="white" p={3} borderRadius="md" border="1px solid" borderColor="gray.200" mb={4}>
+      <Box bg={panelBg} p={3} borderRadius="md" border="1px solid" borderColor={panelBorder} mb={4}>
         <Heading size="sm" mb={2}>{t("profiles_admin") || "Perfis e Permissões"}</Heading>
         <HStack align="start">
           <FormControl>
@@ -130,7 +137,7 @@ export default function Profiles() {
       </Box>
       {error && <Text color="red.500" mb={2}>{error}</Text>}
       {success && <Text color="green.600" mb={2}>{success}</Text>}
-      <Table bg="white">
+      <Table bg={tableBg}>
         <Thead>
           <Tr>
             <Th>{t("feature") || "Funcionalidade"}</Th>

@@ -1,4 +1,4 @@
-import { API_URL, getHeaders } from "../config";
+import { API_URL, getHeaders, LOGIN_PATH, LOGIN_FIELD, ME_PATH } from "../config";
 
 async function handleResponse(res: Response) {
   if (!res.ok) {
@@ -33,8 +33,12 @@ export async function getDeals(params: { limit?: number; offset?: number; sort_b
   if (params.offset) qs.set("offset", String(params.offset));
   if (params.sort_by) qs.set("sort_by", params.sort_by);
   if (params.sort_dir) qs.set("sort_dir", params.sort_dir);
-  const res = await fetch(`${API_URL}/deals/?${qs.toString()}`, { headers: { ...getHeaders() } });
-  return handleResponse(res);
+  try {
+    const res = await fetch(`${API_URL}/deals/?${qs.toString()}`, { headers: { ...getHeaders() } });
+    return await handleResponse(res);
+  } catch {
+    return [];
+  }
 }
 
 export async function getDealsMetrics() {
@@ -61,9 +65,23 @@ export async function listTenants(): Promise<TenantRow[]> {
   }
 }
 
-export async function getDocumentTypes() {
-  const res = await fetch(`${API_URL}/documents/document-types/`, { headers: { ...getHeaders() } });
+export async function getTenant(id: number): Promise<TenantRow & { address?: string; responsible_name?: string; responsible_oab?: string; phone?: string; email?: string; website?: string; instagram?: string; linkedin?: string }>{
+  const res = await fetch(`${API_URL}/tenants/${id}`, { headers: { ...getHeaders() } });
   return handleResponse(res);
+}
+
+export async function updateTenant(id: number, payload: { name?: string; address?: string; responsible_name?: string; responsible_oab?: string; phone?: string; email?: string; website?: string; instagram?: string; linkedin?: string }): Promise<TenantRow>{
+  const res = await fetch(`${API_URL}/tenants/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
+  return handleResponse(res);
+}
+
+export async function getDocumentTypes() {
+  try {
+    const res = await fetch(`${API_URL}/documents/document-types/`, { headers: { ...getHeaders() } });
+    return await handleResponse(res);
+  } catch {
+    return [];
+  }
 }
 
 export type DocumentTypePayload = {
@@ -92,8 +110,12 @@ export async function updateDocumentType(id: number, payload: Partial<DocumentTy
 }
 
 export async function getDealUploads(dealId: number) {
-  const res = await fetch(`${API_URL}/documents/deals/${dealId}/uploads/`, { headers: { ...getHeaders() } });
-  return handleResponse(res);
+  try {
+    const res = await fetch(`${API_URL}/documents/deals/${dealId}/uploads/`, { headers: { ...getHeaders() } });
+    return await handleResponse(res);
+  } catch {
+    return [];
+  }
 }
 
 export async function uploadDocument(dealId: number, documentTypeId: number, file: File, notes?: string, contactId?: number) {
@@ -111,8 +133,12 @@ export async function uploadDocument(dealId: number, documentTypeId: number, fil
 }
 
 export async function getRequiredDocumentsForDeal(dealId: number) {
-  const res = await fetch(`${API_URL}/documents/deals/${dealId}/required/`, { headers: { ...getHeaders() } });
-  return handleResponse(res);
+  try {
+    const res = await fetch(`${API_URL}/documents/deals/${dealId}/required/`, { headers: { ...getHeaders() } });
+    return await handleResponse(res);
+  } catch {
+    return [];
+  }
 }
 
 export async function setRequiredDocumentsForDeal(dealId: number, typeIds: number[]) {
@@ -148,8 +174,12 @@ export async function listContacts(params: { limit?: number; offset?: number; so
   if (params.organization_id) qs.set("organization_id", String(params.organization_id));
   if (params.client_type) qs.set("client_type", params.client_type);
   if (params.lead_source) qs.set("lead_source", params.lead_source);
-  const res = await fetch(`${API_URL}/contacts/?${qs.toString()}`, { headers: { ...getHeaders() } });
-  return handleResponse(res);
+  try {
+    const res = await fetch(`${API_URL}/contacts/?${qs.toString()}`, { headers: { ...getHeaders() } });
+    return await handleResponse(res);
+  } catch {
+    return [];
+  }
 }
 
 export async function getContact(id: number) {
@@ -197,8 +227,12 @@ export async function listOrganizations(params: { limit?: number; offset?: numbe
   if (params.offset) qs.set("offset", String(params.offset));
   if (params.sort_by) qs.set("sort_by", params.sort_by);
   if (params.sort_dir) qs.set("sort_dir", params.sort_dir);
-  const res = await fetch(`${API_URL}/organizations/?${qs.toString()}`, { headers: { ...getHeaders() } });
-  return handleResponse(res);
+  try {
+    const res = await fetch(`${API_URL}/organizations/?${qs.toString()}`, { headers: { ...getHeaders() } });
+    return await handleResponse(res);
+  } catch {
+    return [];
+  }
 }
 
 export type OrganizationPayload = { name: string; sector?: string };
@@ -266,8 +300,12 @@ export async function deleteDeal(id: number) {
 }
 
 export async function listStages() {
-  const res = await fetch(`${API_URL}/stages/`, { headers: { ...getHeaders() } });
-  return handleResponse(res);
+  try {
+    const res = await fetch(`${API_URL}/stages/`, { headers: { ...getHeaders() } });
+    return await handleResponse(res);
+  } catch {
+    return [];
+  }
 }
 
 export type StagePayload = { name: string; order: number };
@@ -316,8 +354,12 @@ export async function listLeadScores(params: { contact_id?: number; deal_id?: nu
   const qs = new URLSearchParams();
   if (params.contact_id) qs.set("contact_id", String(params.contact_id));
   if (params.deal_id) qs.set("deal_id", String(params.deal_id));
-  const res = await fetch(`${API_URL}/lead-scores/?${qs.toString()}`, { headers: { ...getHeaders() } });
-  return handleResponse(res) as Promise<LeadScoreRead[]>;
+  try {
+    const res = await fetch(`${API_URL}/lead-scores/?${qs.toString()}`, { headers: { ...getHeaders() } });
+    return await handleResponse(res) as Promise<LeadScoreRead[]>;
+  } catch {
+    return [] as LeadScoreRead[];
+  }
 }
 
 export async function computeLeadScore(params: { contact_id?: number; deal_id?: number }) {
@@ -334,9 +376,13 @@ export async function listBusinessTypes(params: { limit?: number; offset?: numbe
   if (params.offset) qs.set("offset", String(params.offset));
   if (params.sort_by) qs.set("sort_by", params.sort_by);
   if (params.sort_dir) qs.set("sort_dir", params.sort_dir);
-  const res = await fetch(`${API_URL}/business-types/?${qs.toString()}`, { headers: { ...getHeaders() } });
-  if (res.status === 404) return [];
-  return handleResponse(res);
+  try {
+    const res = await fetch(`${API_URL}/business-types/?${qs.toString()}`, { headers: { ...getHeaders() } });
+    if (res.status === 404) return [];
+    return await handleResponse(res);
+  } catch {
+    return [];
+  }
 }
 
 export type BusinessTypePayload = { name: string; code?: string; description?: string };
@@ -450,118 +496,49 @@ export async function logDocumentsExample(exampleType: string, context?: Record<
 
 export type LoginResponse = { token: string; access_token?: string; user: { id: number; name?: string; email: string; role?: string }; role?: string; must_change_password?: boolean };
 export async function login(payload: { email: string; password: string }): Promise<LoginResponse> {
-  try {
-    const res = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getHeaders() },
-      body: JSON.stringify(payload),
-    });
-    return await handleResponse(res);
-  } catch {
-    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    const authRaw = localStorage.getItem(`tenant:${tenantId}:rbac:users-auth`) || "{}";
-    let role = localStorage.getItem("actor") || "Master";
-    try {
-      const authMap = JSON.parse(authRaw) as Record<string, { password: string; must_change_password: boolean }>;
-      const usersList = await listUsers();
-      const found = usersList.find(u => u.email === payload.email);
-      if (found && authMap[payload.email] && authMap[payload.email].password === payload.password) {
-        role = found.role;
-        const mustChange = authMap[payload.email].must_change_password;
-        const res: LoginResponse = { token: "dev-token", access_token: "dev-token", user: { id: found.id, name: found.name, email: found.email, role: found.role }, role: found.role };
-        if (mustChange) res.must_change_password = true;
-        return res;
-      }
-    } catch (e) { void e; }
-    return { token: "dev-token", access_token: "dev-token", user: { id: 1, name: "Dev User", email: payload.email, role }, role };
-  }
+  const headers = { "Content-Type": "application/json", ...getHeaders() } as Record<string, string>;
+  delete (headers as Record<string, string>).Authorization;
+  const body = { [LOGIN_FIELD]: payload.email, password: payload.password } as Record<string, unknown>;
+  const res = await fetch(`${API_URL}${LOGIN_PATH}`, { method: "POST", headers, body: JSON.stringify(body) });
+  return handleResponse(res);
 }
 
 export async function getMe() {
-  try {
-    const res = await fetch(`${API_URL}/auth/me`, { headers: { ...getHeaders() } });
-    return await handleResponse(res);
-  } catch {
-    const role = localStorage.getItem("actor") || "Master";
-    const email = localStorage.getItem("lastLoginEmail") || "dev@example.com";
-    return { id: 1, name: "Dev User", email, role };
-  }
+  const res = await fetch(`${API_URL}${ME_PATH}`, { headers: { ...getHeaders() } });
+  return await handleResponse(res);
 }
 
 export type Profile = { id: number; name: string; code?: string };
 export type RolePermissionMap = Record<string, string[]>;
 
 export async function listProfiles(): Promise<Profile[]> {
-  try {
-    const res = await fetch(`${API_URL}/rbac/profiles`, { headers: { ...getHeaders() } });
-    return await handleResponse(res);
-  } catch {
-    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    const raw = localStorage.getItem(`tenant:${tenantId}:rbac:profiles`) || "[]";
-    try { return JSON.parse(raw) as Profile[]; } catch { return [] as Profile[]; }
-  }
+  const res = await fetch(`${API_URL}/rbac/profiles`, { headers: { ...getHeaders() } });
+  return handleResponse(res);
 }
 
 export async function createProfile(payload: { name: string; code?: string }): Promise<Profile> {
-  try {
-    const res = await fetch(`${API_URL}/rbac/profiles`, { method: "POST", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
-    return await handleResponse(res);
-  } catch {
-    const list = await listProfiles();
-    const id = Math.max(0, ...list.map((p: Profile) => p.id)) + 1;
-    const created = { id, name: payload.name, code: payload.code } as Profile;
-    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    localStorage.setItem(`tenant:${tenantId}:rbac:profiles`, JSON.stringify([created, ...list]));
-    return created;
-  }
+  const res = await fetch(`${API_URL}/rbac/profiles`, { method: "POST", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
+  return handleResponse(res);
 }
 
 export async function updateProfile(id: number, payload: { name?: string; code?: string }): Promise<Profile | undefined> {
-  try {
-    const res = await fetch(`${API_URL}/rbac/profiles/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
-    return await handleResponse(res);
-  } catch {
-    const list = await listProfiles();
-    const next = list.map((p: Profile) => p.id === id ? { ...p, ...payload } as Profile : p);
-    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    localStorage.setItem(`tenant:${tenantId}:rbac:profiles`, JSON.stringify(next));
-    return next.find((p: Profile) => p.id === id);
-  }
+  const res = await fetch(`${API_URL}/rbac/profiles/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
+  return handleResponse(res);
 }
 
 export async function deleteProfile(id: number): Promise<{ ok: boolean }> {
-  try {
-    const res = await fetch(`${API_URL}/rbac/profiles/${id}`, { method: "DELETE", headers: { ...getHeaders() } });
-    return await handleResponse(res);
-  } catch {
-    const list = await listProfiles();
-    const next = list.filter((p: Profile) => p.id !== id);
-    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    localStorage.setItem(`tenant:${tenantId}:rbac:profiles`, JSON.stringify(next));
-    return { ok: true };
-  }
+  const res = await fetch(`${API_URL}/rbac/profiles/${id}`, { method: "DELETE", headers: { ...getHeaders() } });
+  return handleResponse(res);
 }
 
 export async function getRolePermissions(role: string): Promise<RolePermissionMap> {
-  try {
-    const res = await fetch(`${API_URL}/rbac/roles/${encodeURIComponent(role)}/permissions`, { headers: { ...getHeaders() } });
-    return await handleResponse(res);
-  } catch {
-    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    const raw = localStorage.getItem(`tenant:${tenantId}:role:${role}:permissions`) || "{}";
-    try { return JSON.parse(raw) as RolePermissionMap; } catch { return {} as RolePermissionMap; }
-  }
+  const res = await fetch(`${API_URL}/rbac/roles/${encodeURIComponent(role)}/permissions`, { headers: { ...getHeaders() } });
+  return handleResponse(res);
 }
 
 export async function setRolePermissions(role: string, perms: RolePermissionMap): Promise<unknown> {
-  try {
-    const res = await fetch(`${API_URL}/rbac/roles/${encodeURIComponent(role)}/permissions`, { method: "PUT", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(perms) });
-    return await handleResponse(res);
-  } catch {
-    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    localStorage.setItem(`tenant:${tenantId}:role:${role}:permissions`, JSON.stringify(perms));
-    return { ok: true };
-  }
+  const res = await fetch(`${API_URL}/rbac/roles/${encodeURIComponent(role)}/permissions`, { method: "PUT", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(perms) });
+  return handleResponse(res);
 }
 
 export type UserRow = { id: number; name?: string; email: string; role: string };
@@ -572,63 +549,34 @@ export async function listUsers(): Promise<UserRow[]> {
     return await handleResponse(res);
   } catch {
     const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    const raw = localStorage.getItem(`tenant:${tenantId}:rbac:users`) || "[]";
-    try { return JSON.parse(raw) as UserRow[]; } catch { return [] as UserRow[]; }
+    const usersRaw = localStorage.getItem(`tenant:${tenantId}:rbac:users`) || "[]";
+    try {
+      const parsed = JSON.parse(usersRaw) as UserRow[];
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch { void 0; }
+    const seed: UserRow[] = [{ id: 1, name: "Dev User", email: "dev@example.com", role: "Master" }];
+    try {
+      localStorage.setItem(`tenant:${tenantId}:rbac:users`, JSON.stringify(seed));
+      const authMap = { "dev@example.com": { password: "dev", must_change_password: false } };
+      localStorage.setItem(`tenant:${tenantId}:rbac:users-auth`, JSON.stringify(authMap));
+    } catch { void 0; }
+    return seed;
   }
 }
 
 export async function createUser(payload: { name?: string; email: string; role: string; password?: string, must_change_password?: boolean }): Promise<UserRow & { temporary_password?: string }> {
-  try {
-    const res = await fetch(`${API_URL}/rbac/users`, { method: "POST", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
-    return await handleResponse(res);
-  } catch {
-    const list = await listUsers();
-    const id = Math.max(0, ...list.map((u: UserRow) => u.id)) + 1;
-    const created = { id, name: payload.name, email: payload.email, role: payload.role } as UserRow;
-    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    const tempPass = payload.password || `Consul${String(Math.random()).slice(2,8)}!`;
-    const authRaw = localStorage.getItem(`tenant:${tenantId}:rbac:users-auth`) || "{}";
-    const authMap = (() => { try { return JSON.parse(authRaw) as Record<string, { password: string; must_change_password: boolean }>; } catch { return {}; } })();
-    authMap[created.email] = { password: tempPass, must_change_password: payload.must_change_password ?? true };
-    localStorage.setItem(`tenant:${tenantId}:rbac:users-auth`, JSON.stringify(authMap));
-    localStorage.setItem(`tenant:${tenantId}:rbac:users`, JSON.stringify([created, ...list]));
-    return { ...created, temporary_password: tempPass };
-  }
+  const res = await fetch(`${API_URL}/rbac/users`, { method: "POST", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
+  return handleResponse(res);
 }
 
 export async function updateUser(id: number, payload: { name?: string; email?: string; role?: string; password?: string, must_change_password?: boolean }): Promise<UserRow | undefined> {
-  try {
-    const res = await fetch(`${API_URL}/rbac/users/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
-    return await handleResponse(res);
-  } catch {
-    const list = await listUsers();
-    const next = list.map((u: UserRow) => u.id === id ? { ...u, ...payload } as UserRow : u);
-    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    localStorage.setItem(`tenant:${tenantId}:rbac:users`, JSON.stringify(next));
-    const updated = next.find((u: UserRow) => u.id === id);
-    if (updated && (payload.password || typeof payload.must_change_password !== "undefined")) {
-      const authRaw = localStorage.getItem(`tenant:${tenantId}:rbac:users-auth`) || "{}";
-      const authMap = (() => { try { return JSON.parse(authRaw) as Record<string, { password: string; must_change_password: boolean }>; } catch { return {}; } })();
-      const emailKey = updated.email;
-      const cur = authMap[emailKey] || { password: "", must_change_password: true };
-      authMap[emailKey] = { password: payload.password || cur.password, must_change_password: typeof payload.must_change_password !== "undefined" ? !!payload.must_change_password : cur.must_change_password };
-      localStorage.setItem(`tenant:${tenantId}:rbac:users-auth`, JSON.stringify(authMap));
-    }
-    return updated;
-  }
+  const res = await fetch(`${API_URL}/rbac/users/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
+  return handleResponse(res);
 }
 
 export async function deleteUser(id: number): Promise<{ ok: boolean }> {
-  try {
-    const res = await fetch(`${API_URL}/rbac/users/${id}`, { method: "DELETE", headers: { ...getHeaders() } });
-    return await handleResponse(res);
-  } catch {
-    const list = await listUsers();
-    const next = list.filter((u: UserRow) => u.id !== id);
-    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-    localStorage.setItem(`tenant:${tenantId}:rbac:users`, JSON.stringify(next));
-    return { ok: true };
-  }
+  const res = await fetch(`${API_URL}/rbac/users/${id}`, { method: "DELETE", headers: { ...getHeaders() } });
+  return handleResponse(res);
 }
 
 export async function syncRBACFromLocalToServer(): Promise<{ profiles: number; roles: number; users: number }> {

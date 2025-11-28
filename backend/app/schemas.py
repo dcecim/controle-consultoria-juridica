@@ -1,10 +1,18 @@
 # imports e schemas de auditoria
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, RootModel
 from typing import Any, Optional, Dict, List
 from datetime import datetime
 
 class TenantBase(BaseModel):
     name: str
+    address: Optional[str] = None
+    responsible_name: Optional[str] = None
+    responsible_oab: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    instagram: Optional[str] = None
+    linkedin: Optional[str] = None
 
 class TenantCreate(TenantBase):
     pass
@@ -12,6 +20,17 @@ class TenantCreate(TenantBase):
 class Tenant(TenantBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+class TenantUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    responsible_name: Optional[str] = None
+    responsible_oab: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    instagram: Optional[str] = None
+    linkedin: Optional[str] = None
 
 class OrganizationBase(BaseModel):
     name: str
@@ -204,3 +223,57 @@ class DocumentTypeUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     allowed_mime_types: list[str] | None = None
+
+class ProfileBase(BaseModel):
+    name: str
+    code: Optional[str] = None
+
+class ProfileCreate(ProfileBase):
+    pass
+
+class Profile(ProfileBase):
+    id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class UserBase(BaseModel):
+    name: Optional[str] = None
+    email: str
+    role: str
+    must_change_password: Optional[bool] = True
+
+class UserCreate(UserBase):
+    password: Optional[str] = None
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    password: Optional[str] = None
+    must_change_password: Optional[bool] = None
+
+class UserRead(BaseModel):
+    id: int
+    name: Optional[str] = None
+    email: str
+    role: str
+    model_config = ConfigDict(from_attributes=True)
+
+class RolePermissionsPayload(RootModel[Dict[str, List[str]]]):
+    pass
+
+class LoginPayload(BaseModel):
+    email: str
+    password: str
+
+class LoginResponseUser(BaseModel):
+    id: int
+    name: Optional[str] = None
+    email: str
+    role: Optional[str] = None
+
+class LoginResponse(BaseModel):
+    token: str
+    access_token: Optional[str] = None
+    role: Optional[str] = None
+    must_change_password: Optional[bool] = None
+    user: LoginResponseUser

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { login as apiLogin, getMe } from "./lib/api";
+import { login as apiLogin, getMe, getRolePermissions } from "./lib/api";
 import { AuthContext } from "./auth-context";
 import type { AuthContextValue } from "./auth-context";
 
@@ -15,6 +15,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(me || null);
         setRole(r);
         localStorage.setItem("actor", r);
+        const tenantId = Number(localStorage.getItem("tenantId") || 1);
+        getRolePermissions(r).then((perms) => {
+          try { localStorage.setItem(`tenant:${tenantId}:role:${r}:permissions`, JSON.stringify(perms)); } catch { void 0; }
+        }).catch(() => {});
       }).catch(() => {});
     }
   }, [token, role]);
@@ -26,9 +30,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const r = u.role || "Master";
     setToken(t);
     localStorage.setItem("token", t);
+    try { localStorage.setItem("lastLoginEmail", email); } catch { void 0; }
     setUser(u);
     setRole(r);
     localStorage.setItem("actor", r);
+    const tenantId = Number(localStorage.getItem("tenantId") || 1);
+    getRolePermissions(r).then((perms) => {
+      try { localStorage.setItem(`tenant:${tenantId}:role:${r}:permissions`, JSON.stringify(perms)); } catch { void 0; }
+    }).catch(() => {});
     return res;
   };
 
@@ -42,19 +51,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const defaultPerms: Record<string, string[]> = useMemo(() => ({
     dashboard: ["view"],
-    deals: ["view", "edit", "delete"],
-    upload: ["view", "edit"],
-    contacts: ["view", "edit", "delete"],
-    organizations: ["view", "edit", "delete"],
-    stages: ["view", "edit", "delete"],
-    business_types: ["view", "edit", "delete"],
-    profiles_admin: ["view", "edit"],
+    deals: ["view"],
+    upload: [],
+    contacts: [],
+    organizations: [],
+    stages: [],
+    business_types: [],
+    profiles_admin: [],
   }), []);
 
   const canAccess = (feature: string, action: string = "view") => {
     const r = role || "Guest";
     if (r === "Master" || r === "Projetista") return true;
-    const cfgRaw = localStorage.getItem(`role:${r}:permissions`);
+    const tenantId = Number(localStorage.getItem("tenantId") || 1);
+    const cfgRaw = localStorage.getItem(`tenant:${tenantId}:role:${r}:permissions`);
     if (cfgRaw) {
       try {
         const cfg = JSON.parse(cfgRaw) as Record<string, string[]>;

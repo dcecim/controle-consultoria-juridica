@@ -84,6 +84,14 @@ def apply_minimal_schema_patch(engine):
     try:
         with engine.connect() as conn:
             conn.execution_options(isolation_level="AUTOCOMMIT")
+            conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS address VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS responsible_name VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS responsible_oab VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS phone VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS email VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS website VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS instagram VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS linkedin VARCHAR;")
             # organizations
             conn.exec_driver_sql("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS sector VARCHAR;")
             # contacts

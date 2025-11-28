@@ -8,6 +8,14 @@ class Tenant(Base):
     __tablename__ = "tenants"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
+    address = Column(String, nullable=True)
+    responsible_name = Column(String, nullable=True)
+    responsible_oab = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    instagram = Column(String, nullable=True)
+    linkedin = Column(String, nullable=True)
     # relationships futuros
 
 class Organization(Base):
@@ -130,3 +138,28 @@ class DocumentUpload(Base):
     size_bytes = Column(Integer, nullable=True)
     notes = Column(String, nullable=True)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class Profile(Base):
+    __tablename__ = "profiles"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    name = Column(String, nullable=False, index=True)
+    code = Column(String, nullable=True, index=True)
+
+class RolePermission(Base):
+    __tablename__ = "role_permissions"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    role = Column(String, nullable=False, index=True)
+    resource = Column(String, nullable=False, index=True)
+    actions = Column(JSON, nullable=False)
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    name = Column(String, nullable=True)
+    email = Column(String, nullable=False, unique=True, index=True)
+    role = Column(String, nullable=False, index=True)
+    password_hash = Column(String, nullable=False)
+    must_change_password = Column(Boolean, nullable=False, default=True)

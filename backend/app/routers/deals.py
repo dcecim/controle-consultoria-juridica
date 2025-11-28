@@ -18,8 +18,14 @@ def get_db():
     finally:
         db.close()
 
-def get_tenant_id(x_tenant_id: int = Header(..., alias="X-Tenant-ID")) -> int:
-    return x_tenant_id
+def get_tenant_id(x_tenant_id: int | None = Header(default=None, alias="X-Tenant-ID")) -> int:
+    try:
+        import os
+        if x_tenant_id is None:
+            return int(os.getenv("TENANT_ID", "1"))
+        return int(x_tenant_id)
+    except Exception:
+        return 1
 
 def to_dict(obj: models.Deal) -> dict:
     return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}

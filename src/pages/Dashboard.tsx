@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { SimpleGrid, Stat, StatLabel, StatNumber, Box, Heading, Text } from "@chakra-ui/react";
+import { SimpleGrid, Stat, StatLabel, StatNumber, Box, Heading, Text, useColorModeValue } from "@chakra-ui/react";
 import { getDealsMetrics } from "../lib/api";
 import { useI18n } from "../useI18n";
 
@@ -11,6 +11,12 @@ export default function Dashboard() {
   const { t } = useI18n();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const statBg = useColorModeValue("white","gray.800");
+  const statBorder = useColorModeValue("gray.200","gray.700");
+  const boxBg = useColorModeValue("white","gray.800");
+  const boxBorder = useColorModeValue("gray.200","gray.700");
+  const textMuted = useColorModeValue("gray.600","gray.300");
 
   useEffect(() => {
     getDealsMetrics().then(setMetrics).catch((e) => setError(String(e)));
@@ -24,7 +30,7 @@ export default function Dashboard() {
         <>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={6}>
             {metrics.by_stage?.map((s) => (
-              <Stat key={s.stage_id} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200">
+              <Stat key={s.stage_id} bg={statBg} p={4} borderRadius="md" border="1px solid" borderColor={statBorder}>
                 <StatLabel>{s.name}</StatLabel>
                 <StatNumber>{s.count}</StatNumber>
               </Stat>
@@ -32,18 +38,18 @@ export default function Dashboard() {
           </SimpleGrid>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={6}>
             {metrics.by_status?.map((s) => (
-              <Stat key={s.status} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200">
+              <Stat key={s.status} bg={statBg} p={4} borderRadius="md" border="1px solid" borderColor={statBorder}>
                 <StatLabel>{t("status")}: {s.status}</StatLabel>
                 <StatNumber>{s.count}</StatNumber>
               </Stat>
             ))}
           </SimpleGrid>
-          <Box bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200">
+          <Box bg={boxBg} p={4} borderRadius="md" border="1px solid" borderColor={boxBorder}>
             <Text>
               {t("conversion_rate")}:
               <b> {Number(((metrics.conversion_rate?.win_rate ?? 0) * 100).toFixed(2))}%</b>
             </Text>
-            <Text color="gray.600">{t("won")}: {metrics.conversion_rate?.won ?? 0} • {t("lost")}: {metrics.conversion_rate?.lost ?? 0}</Text>
+            <Text color={textMuted}>{t("won")}: {metrics.conversion_rate?.won ?? 0} • {t("lost")}: {metrics.conversion_rate?.lost ?? 0}</Text>
           </Box>
         </>
       )}
