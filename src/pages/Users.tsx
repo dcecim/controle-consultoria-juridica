@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
-import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, Select, FormControl, FormLabel, Checkbox, useColorModeValue } from "@chakra-ui/react";
+import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, Select, FormControl, FormLabel, Checkbox, useColorModeValue, Image } from "@chakra-ui/react";
 import { useI18n } from "../useI18n";
-import { listUsers, createUser, updateUser, deleteUser, syncRBACFromLocalToServer } from "../lib/api";
+import { listUsers, createUser, updateUser, deleteUser, syncRBACFromLocalToServer, setupMfa } from "../lib/api";
 import { useAuth } from "../useAuth";
 
-type UserRow = { id: number; name?: string; email: string; role: string };
+type UserRow = { id: number; name?: string; email: string; role: string; phone?: string };
 
 export default function Users() {
   const { t } = useI18n();
   const { canAccess } = useAuth();
   const [rows, setRows] = useState<UserRow[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<UserRow & { password?: string; must_change_password?: boolean }>({ id: 0, name: "", email: "", role: "Guest", password: "", must_change_password: true });
+  const [form, setForm] = useState<UserRow & { password?: string; must_change_password?: boolean; mfa_enabled?: boolean; mfa_method?: string }>({ id: 0, name: "", email: "", role: "Guest", password: "", must_change_password: true, mfa_enabled: false, mfa_method: "totp", phone: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [qr, setQr] = useState<{ otpauth_uri: string; secret: string; qr_base64?: string } | null>(null);
 
   const panelBg = useColorModeValue("white","gray.800");
   const panelBorder = useColorModeValue("gray.200","gray.700");
@@ -21,9 +22,9 @@ export default function Users() {
   const load = () => { listUsers().then(setRows).catch((e) => setError(String(e))); };
   useEffect(() => { load(); }, []);
 
-  const startCreate = () => { setEditingId(null); setForm({ id: 0, name: "", email: "", role: "Guest", password: "", must_change_password: true }); };
-  const startEdit = (u: UserRow) => { setEditingId(u.id); setForm({ ...u, password: "", must_change_password: false }); };
-  const cancel = () => { setEditingId(null); setForm({ id: 0, name: "", email: "", role: "Guest", password: "", must_change_password: true }); };
+  const startCreate = () => { setEditingId(null); setForm({ id: 0, name: "", email: "", role: "Guest", password: "", must_change_password: true, mfa_enabled: false, mfa_method: "totp", phone: "" }); };
+  const startEdit = (u: UserRow) => { setEditingId(u.id); setForm({ ...u, password: "", must_change_password: false, mfa_enabled: false, mfa_method: "totp" }); setQr(null); };
+  const cancel = () => { setEditingId(null); setForm({ id: 0, name: "", email: "", role: "Guest", password: "", must_change_password: true, mfa_enabled: false, mfa_method: "totp", phone: "" }); };
 
   const submit = async () => {
     try {
@@ -72,6 +73,23 @@ export default function Users() {
             <FormLabel>{t("password") || "Senha"}</FormLabel>
             <Input type="password" value={form.password ?? ""} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           </FormControl>
+          <FormControl>
+            <FormLabel>Telefone</FormLabel>
+            <Input value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          </FormControl>
+          <FormControl>
+            <FormLabel>MFA Método</FormLabel>
+            <Select value={form.mfa_method ?? "totp"} onChange={(e) => setForm({ ...form, mfa_method: e.target.value })}>
+              <option value="totp">Autenticador (TOTP)</option>
+              <option value="otp_email">Código por e-mail</option>
+              <option value="otp_sms">Código por SMS</option>
+              <option value="otp_whatsapp">Código por WhatsApp</option>
+            </Select>
+          </FormControl>
+          <FormControl display="flex" alignItems="center">
+            <Checkbox isChecked={!!form.mfa_enabled} onChange={(e) => setForm({ ...form, mfa_enabled: e.target.checked })} />
+            <FormLabel ml={2}>Habilitar MFA</FormLabel>
+          </FormControl>
           <FormControl display="flex" alignItems="center">
             <Checkbox isChecked={!!form.must_change_password} onChange={(e) => setForm({ ...form, must_change_password: e.target.checked })} />
             <FormLabel ml={2}>{t("must_change_password") || "Deve trocar a senha no primeiro login"}</FormLabel>
@@ -80,6 +98,18 @@ export default function Users() {
             <Button colorScheme="blue" onClick={submit} isDisabled={!canAccess("profiles_admin","edit")}>{t("save")}</Button>
             <Button variant="outline" onClick={cancel}>{t("cancel")}</Button>
           </HStack>
+          {form.mfa_method === "totp" && (
+            <HStack>
+              <Button onClick={async () => { setError(null); try { const r = await setupMfa(); setQr(r); } catch (e) { setError(String(e)); } }}>Configurar TOTP</Button>
+            </HStack>
+          )}
+          {qr && (
+            <VStack align="stretch">
+              <Text>Segredo: {qr.secret}</Text>
+              {qr.qr_base64 && <Image src={qr.qr_base64} alt="QR" />}
+              <Text>URI: {qr.otpauth_uri}</Text>
+            </VStack>
+          )}
         </VStack>
       )}
       <Table bg={tableBg}>

@@ -112,6 +112,12 @@ def update_user(id: int, payload: schemas.UserUpdate, db: Session = Depends(get_
         obj.password_hash = _hash_password(payload.password)
     if payload.must_change_password is not None:
         obj.must_change_password = payload.must_change_password
+    if getattr(payload, "phone", None) is not None:
+        obj.phone = payload.phone
+    if getattr(payload, "mfa_enabled", None) is not None:
+        obj.mfa_enabled = bool(payload.mfa_enabled)
+    if getattr(payload, "mfa_method", None) is not None:
+        obj.mfa_method = payload.mfa_method
     db.commit()
     db.refresh(obj)
     return obj

@@ -12,6 +12,20 @@ dist
 dist-ssr
 *.local
 
+# Secrets and env
+.env
+.env.*
+.env.local
+twilio.bat
+.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+*.exe
+*.dll
+*.so
+~$*.docx
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

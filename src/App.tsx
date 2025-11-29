@@ -15,6 +15,7 @@ import Profiles from "./pages/Profiles";
 import Users from "./pages/Users";
 import ChangePassword from "./pages/ChangePassword";
 import Tenant from "./pages/Tenant";
+import HelpProvider from "./HelpProvider";
 
 function Protected({ feature, children }: { feature: string; children: React.ReactNode }) {
   const { canAccess } = useAuth();
@@ -37,22 +38,22 @@ export default function App() {
           <Box flex="1">
             <Container maxW="7xl" py={6}>
               <Text>Teste de renderização</Text>
-              <Routes>
-                <Route path="/" element={<Protected feature="dashboard"><Dashboard /></Protected>} />
-                <Route path="/deals" element={<Protected feature="deals"><Deals /></Protected>} />
-                <Route path="/upload" element={<Protected feature="upload"><Upload /></Protected>} />
-                <Route path="/contacts" element={<Protected feature="contacts"><Contacts /></Protected>} />
-                <Route path="/organizations" element={<Protected feature="organizations"><Organizations /></Protected>} />
-                <Route path="/stages" element={<Protected feature="stages"><Stages /></Protected>} />
-                <Route path="/business-types" element={<Protected feature="business_types"><BusinessTypes /></Protected>} />
-                <Route path="/profiles" element={<Protected feature="profiles_admin"><Profiles /></Protected>} />
-                <Route path="/tenant" element={<Protected feature="profiles_admin"><Tenant /></Protected>} />
-                <Route path="/users" element={<Protected feature="profiles_admin"><Users /></Protected>} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/change-password" element={<Protected feature="profiles_admin"><ChangePassword /></Protected>} />
-                {/* fallback para rotas desconhecidas */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+              <HelpProvider>
+                <Routes>
+                  <Route path="/" element={<Protected feature="dashboard"><Dashboard /></Protected>} />
+                  <Route path="/deals" element={<Protected feature="deals"><Deals /></Protected>} />
+                  <Route path="/upload" element={<Protected feature="upload"><Upload /></Protected>} />
+                  <Route path="/contacts" element={<Protected feature="contacts"><Contacts /></Protected>} />
+                  <Route path="/organizations" element={<Protected feature="organizations"><Organizations /></Protected>} />
+                  <Route path="/stages" element={<Protected feature="stages"><Stages /></Protected>} />
+                  <Route path="/business-types" element={<Protected feature="business_types"><BusinessTypes /></Protected>} />
+                  <Route path="/profiles" element={<Protected feature="profiles_admin"><Profiles /></Protected>} />
+                  <Route path="/tenant" element={<Protected feature="profiles_admin"><Tenant /></Protected>} />
+                  <Route path="/users" element={<Protected feature="profiles_admin"><Users /></Protected>} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/change-password" element={<Protected feature="profiles_admin"><ChangePassword /></Protected>} />
+                </Routes>
+              </HelpProvider>
             </Container>
           </Box>
         </Flex>

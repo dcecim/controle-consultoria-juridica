@@ -240,6 +240,9 @@ class UserBase(BaseModel):
     email: str
     role: str
     must_change_password: Optional[bool] = True
+    phone: Optional[str] = None
+    mfa_enabled: Optional[bool] = None
+    mfa_method: Optional[str] = None
 
 class UserCreate(UserBase):
     password: Optional[str] = None
@@ -250,6 +253,9 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     password: Optional[str] = None
     must_change_password: Optional[bool] = None
+    phone: Optional[str] = None
+    mfa_enabled: Optional[bool] = None
+    mfa_method: Optional[str] = None
 
 class UserRead(BaseModel):
     id: int
@@ -265,6 +271,10 @@ class LoginPayload(BaseModel):
     email: str
     password: str
 
+class MfaVerifyPayload(BaseModel):
+    mfa_token: str
+    code: str
+
 class LoginResponseUser(BaseModel):
     id: int
     name: Optional[str] = None
@@ -277,3 +287,5 @@ class LoginResponse(BaseModel):
     role: Optional[str] = None
     must_change_password: Optional[bool] = None
     user: LoginResponseUser
+    mfa_required: Optional[bool] = None
+    mfa_token: Optional[str] = None

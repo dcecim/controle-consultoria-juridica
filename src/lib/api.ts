@@ -494,12 +494,22 @@ export async function logDocumentsExample(exampleType: string, context?: Record<
   return handleResponse(res);
 }
 
-export type LoginResponse = { token: string; access_token?: string; user: { id: number; name?: string; email: string; role?: string }; role?: string; must_change_password?: boolean };
+export type LoginResponse = { token: string; access_token?: string; user: { id: number; name?: string; email: string; role?: string }; role?: string; must_change_password?: boolean; mfa_required?: boolean; mfa_token?: string };
 export async function login(payload: { email: string; password: string }): Promise<LoginResponse> {
   const headers = { "Content-Type": "application/json", ...getHeaders() } as Record<string, string>;
   delete (headers as Record<string, string>).Authorization;
   const body = { [LOGIN_FIELD]: payload.email, password: payload.password } as Record<string, unknown>;
   const res = await fetch(`${API_URL}${LOGIN_PATH}`, { method: "POST", headers, body: JSON.stringify(body) });
+  return handleResponse(res);
+}
+
+export async function verifyMfa(payload: { mfa_token: string; code: string }): Promise<LoginResponse> {
+  const res = await fetch(`${API_URL}/auth/mfa/verify`, { method: "POST", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
+  return handleResponse(res);
+}
+
+export async function setupMfa(): Promise<{ otpauth_uri: string; secret: string; qr_base64?: string }>{
+  const res = await fetch(`${API_URL}/auth/mfa/setup`, { method: "POST", headers: { ...getHeaders() } });
   return handleResponse(res);
 }
 
@@ -569,7 +579,7 @@ export async function createUser(payload: { name?: string; email: string; role: 
   return handleResponse(res);
 }
 
-export async function updateUser(id: number, payload: { name?: string; email?: string; role?: string; password?: string, must_change_password?: boolean }): Promise<UserRow | undefined> {
+export async function updateUser(id: number, payload: { name?: string; email?: string; role?: string; password?: string; must_change_password?: boolean; phone?: string; mfa_enabled?: boolean; mfa_method?: string }): Promise<UserRow | undefined> {
   const res = await fetch(`${API_URL}/rbac/users/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
   return handleResponse(res);
 }

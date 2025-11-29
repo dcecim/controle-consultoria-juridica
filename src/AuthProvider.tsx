@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(t);
     localStorage.setItem("token", t);
     try { localStorage.setItem("lastLoginEmail", email); } catch { void 0; }
+    try { localStorage.removeItem(`manual:seen:${email}`); } catch { void 0; }
     setUser(u);
     setRole(r);
     localStorage.setItem("actor", r);

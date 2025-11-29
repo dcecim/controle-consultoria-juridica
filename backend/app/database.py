@@ -105,6 +105,11 @@ def apply_minimal_schema_patch(engine):
             conn.exec_driver_sql("ALTER TABLE deals ADD COLUMN IF NOT EXISTS email_open_rate DOUBLE PRECISION;")
             conn.exec_driver_sql("ALTER TABLE deals ADD COLUMN IF NOT EXISTS interactions_total INTEGER NOT NULL DEFAULT 0;")
             conn.exec_driver_sql("ALTER TABLE deals ADD COLUMN IF NOT EXISTS docs_shared BOOLEAN NOT NULL DEFAULT FALSE;")
+            # users MFA
+            conn.exec_driver_sql("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE;")
+            conn.exec_driver_sql("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_secret VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_method VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR;")
         logger.info(
             "Minimal schema patch applied for lead scoring columns",
             extra={"request_id": "-", "tenant_id": "-", "actor": "-"},

@@ -163,3 +163,7 @@ class User(Base):
     role = Column(String, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
     must_change_password = Column(Boolean, nullable=False, default=True)
+    mfa_enabled = Column(Boolean, nullable=False, default=False)
+    mfa_secret = Column(String, nullable=True)
+    mfa_method = Column(String, nullable=True)  # 'totp' | 'otp_email' | 'otp_sms'
+    phone = Column(String, nullable=True)
