@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect x="0" y="0" width="960" height="540" fill="#f7fafc" />
+  <rect x="60" y="60" width="840" height="420" rx="12" fill="#ffffff" stroke="#cbd5e0" />
+  <text x="80" y="90" font-size="20" fill="#2d3748">Pré-visualização e Geração</text>
+  <text x="80" y="120" font-size="12" fill="#718096">Modelo com tags substituídas</text>
+  <rect x="80" y="140" width="800" height="260" fill="#ffffff" stroke="#e2e8f0" />
+  <text x="100" y="170" font-size="12" fill="#4a5568">CONTRATO DE PRESTAÇÃO DE SERVIÇOS</text>
+  <text x="100" y="190" font-size="12" fill="#4a5568">Entre Consultor Juridico Ltda e João Silva...</text>
+  <rect x="80" y="420" width="160" height="36" rx="6" fill="#3182ce" />
+  <text x="105" y="444" font-size="14" fill="#fff">Gerar PDF</text>
+</svg>

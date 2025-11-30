@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect x="0" y="0" width="960" height="540" fill="#f7fafc" />
+  <rect x="60" y="60" width="840" height="420" rx="12" fill="#ffffff" stroke="#cbd5e0" />
+  <text x="80" y="90" font-size="20" fill="#2d3748">Referência de Tags</text>
+  <rect x="80" y="110" width="800" height="330" fill="#ffffff" stroke="#e2e8f0" />
+  <text x="100" y="140" font-size="12" fill="#4a5568">Empresa: {{empresa.nome}}, {{empresa.address}}, {{empresa.phone}}, {{empresa.email}}, {{empresa.website}}, {{empresa.instagram}}, {{empresa.linkedin}}, {{empresa.responsible_name}}, {{empresa.responsible_oab}}</text>
+  <text x="100" y="170" font-size="12" fill="#4a5568">Contato: {{contato.nome}}, {{contato.email}}, {{contato.telefone}}, {{contato.cpf}}, {{contato.endereco}}</text>
+  <text x="100" y="200" font-size="12" fill="#4a5568">Organização: {{organizacao.nome}}, {{organizacao.cnpj}}, {{organizacao.endereco}}</text>
+  <text x="100" y="230" font-size="12" fill="#4a5568">Negócio: {{negocio.id}}, {{negocio.titulo}}, {{negocio.tipo}}, {{negocio.fase}}, {{negocio.valor}}, {{negocio.estimated_value}}</text>
+  <text x="100" y="260" font-size="12" fill="#4a5568">Data: {{data.atual}}</text>
+</svg>

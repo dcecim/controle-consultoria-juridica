@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect x="0" y="0" width="960" height="540" fill="#f7fafc" />
+  <rect x="60" y="60" width="840" height="420" rx="12" fill="#ffffff" stroke="#cbd5e0" />
+  <text x="80" y="90" font-size="20" fill="#2d3748">Envio de Documentos</text>
+  <text x="80" y="120" font-size="14" fill="#718096">Selecione o negócio, tipo de documento e faça upload do arquivo/modelo</text>
+  <rect x="80" y="140" width="360" height="30" rx="6" fill="#edf2f7" stroke="#cbd5e0" />
+  <text x="85" y="160" font-size="12" fill="#4a5568">Negócio</text>
+  <rect x="80" y="190" width="360" height="30" rx="6" fill="#edf2f7" stroke="#cbd5e0" />
+  <text x="85" y="210" font-size="12" fill="#4a5568">Tipo de Documento</text>
+  <rect x="80" y="240" width="360" height="36" rx="6" fill="#edf2f7" stroke="#cbd5e0" />
+  <text x="85" y="262" font-size="12" fill="#4a5568">Arquivo (.docx/.pdf/.txt)</text>
+  <rect x="80" y="300" width="160" height="36" rx="6" fill="#3182ce" />
+  <text x="115" y="324" font-size="14" fill="#fff">Enviar</text>
+  <rect x="480" y="140" width="380" height="300" rx="8" fill="#f7fafc" stroke="#e2e8f0" />
+  <text x="500" y="165" font-size="14" fill="#718096">Pré-visualização de modelo com tags</text>
+  <rect x="500" y="180" width="340" height="240" fill="#ffffff" stroke="#e2e8f0" />
+  <text x="510" y="200" font-size="12" fill="#4a5568">{{negocio.titulo}} - {{contato.nome}}</text>
+  <text x="510" y="220" font-size="12" fill="#4a5568">{{empresa.nome}} | {{organizacao.nome}}</text>
+</svg>

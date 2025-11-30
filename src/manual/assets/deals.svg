@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect x="0" y="0" width="960" height="540" fill="#f7fafc" />
+  <rect x="60" y="60" width="840" height="420" rx="12" fill="#ffffff" stroke="#cbd5e0" />
+  <text x="80" y="90" font-size="20" fill="#2d3748">Negócios</text>
+  <text x="80" y="115" font-size="12" fill="#718096">Campos principais do cadastro</text>
+  <text x="80" y="145" font-size="12" fill="#718096">Título</text>
+  <rect x="80" y="155" width="360" height="30" rx="6" fill="#edf2f7" stroke="#cbd5e0" />
+  <text x="450" y="175" font-size="12" fill="#4a5568">Ex.: "Ação de Cobrança"</text>
+  <text x="80" y="200" font-size="12" fill="#718096">Organização</text>
+  <rect x="80" y="210" width="360" height="30" rx="6" fill="#edf2f7" stroke="#cbd5e0" />
+  <text x="450" y="230" font-size="12" fill="#4a5568">Ex.: "Empresa X Ltda"</text>
+  <text x="80" y="255" font-size="12" fill="#718096">Contato</text>
+  <rect x="80" y="265" width="360" height="30" rx="6" fill="#edf2f7" stroke="#cbd5e0" />
+  <text x="450" y="285" font-size="12" fill="#4a5568">Ex.: "João Silva"</text>
+  <text x="80" y="310" font-size="12" fill="#718096">Fase</text>
+  <rect x="80" y="320" width="240" height="30" rx="6" fill="#edf2f7" stroke="#cbd5e0" />
+  <text x="330" y="340" font-size="12" fill="#4a5568">Ex.: "Negociação"</text>
+  <text x="80" y="365" font-size="12" fill="#718096">Valor estimado</text>
+  <rect x="80" y="375" width="160" height="30" rx="6" fill="#edf2f7" stroke="#cbd5e0" />
+  <text x="250" y="395" font-size="12" fill="#4a5568">Ex.: 15000,00</text>
+  <text x="80" y="420" font-size="12" fill="#718096">Questão principal</text>
+  <rect x="80" y="430" width="360" height="30" rx="6" fill="#edf2f7" stroke="#cbd5e0" />
+  <text x="450" y="450" font-size="12" fill="#4a5568">Ex.: "Inadimplência contratual"</text>
+</svg>
