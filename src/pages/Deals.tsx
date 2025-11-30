@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Table, Thead, Tbody, Tr, Th, Td, Box, Heading, Select, HStack, Button, Text, VStack, Input, Checkbox, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, List, ListItem, ModalFooter, Code, useToast, useColorModeValue } from "@chakra-ui/react";
+import { Table, Thead, Tbody, Tr, Th, Td, Box, Heading, Select, HStack, Button, Text, VStack, Input, Checkbox, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, List, ListItem, ModalFooter, Code, useToast, useColorModeValue, useMediaQuery, Badge } from "@chakra-ui/react";
+import { useHelp } from "../help-context";
 import { MdInfoOutline } from "react-icons/md";
 import { getDeals, createDeal, updateDeal, deleteDeal, listStages, listLeadScores, computeLeadScore, logDealFormExample, listBusinessTypes, generateContractDocx, generatePowerOfAttorneyDocx, listOrganizations, getDocumentTypes, uploadDocument, getDealUploads, downloadUploadFile, listContacts } from "../lib/api";
 import { useAuth } from "../useAuth";
@@ -26,6 +27,7 @@ type DealForm = { title: string; stage_id?: number; estimated_value?: number; va
 
 export default function Deals() {
   const { t } = useI18n();
+  const help = useHelp();
   const learn = useDisclosure();
   const [searchParams] = useSearchParams();
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -36,6 +38,7 @@ export default function Deals() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<DealForm>({ title: "", stage_id: undefined, estimated_value: 0 });
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [initialForm, setInitialForm] = useState<DealForm>({ title: "", stage_id: undefined, estimated_value: 0 });
   const [stages, setStages] = useState<{ id: number; name: string }[]>([]);
   const [businessTypes, setBusinessTypes] = useState<{ id: number; name: string }[]>([]);
   const [orgs, setOrgs] = useState<{ id: number; name: string; sector?: string }[]>([]);
@@ -55,6 +58,10 @@ export default function Deals() {
   const [estimatedMasked, setEstimatedMasked] = useState<string>(formatNum(0));
   const [valueMasked, setValueMasked] = useState<string>(formatNum(0));
   const formatPct = useCallback((n: number) => new Intl.NumberFormat(getLocale(), { style: "percent", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n), []);
+  const [saving, setSaving] = useState(false);
+  const [isSmall] = useMediaQuery("(max-width: 768px)");
+  const btnBg = useColorModeValue("brand.500","brand.600");
+  const btnHoverBg = useColorModeValue("brand.600","brand.500");
 
   const load = useCallback(() => {
     getDeals({ limit, offset, sort_by: sortBy, sort_dir: sortDir })
@@ -85,13 +92,17 @@ export default function Deals() {
 
   const startCreate = () => {
     setEditingId(null);
-    setForm({ title: "", stage_id: stages[0]?.id, estimated_value: 0, value: 0, status: "Novo", email_open_rate: 0, interactions_total: 0, docs_shared: false });
+    const f = { title: "", stage_id: stages[0]?.id, estimated_value: 0, value: 0, status: "Novo", email_open_rate: 0, interactions_total: 0, docs_shared: false } as DealForm;
+    setForm(f);
+    setInitialForm(f);
     setEstimatedMasked(formatNum(0));
     setValueMasked(formatNum(0));
   };
   const startEdit = useCallback((d: Deal) => {
     setEditingId(d.id);
-    setForm({ title: d.title, stage_id: d.stage_id, estimated_value: d.estimated_value ?? 0, value: d.value ?? 0, status: d.status, email_open_rate: d.email_open_rate ?? 0, interactions_total: d.interactions_total ?? 0, docs_shared: d.docs_shared ?? false });
+    const f = { title: d.title, stage_id: d.stage_id, estimated_value: d.estimated_value ?? 0, value: d.value ?? 0, status: d.status, email_open_rate: d.email_open_rate ?? 0, interactions_total: d.interactions_total ?? 0, docs_shared: d.docs_shared ?? false } as DealForm;
+    setForm(f);
+    setInitialForm(f);
     setEstimatedMasked(formatNum(d.estimated_value ?? 0));
     setValueMasked(formatNum(d.value ?? 0));
   }, [formatNum]);
@@ -121,7 +132,8 @@ export default function Deals() {
     }).catch(() => setLastContract(null));
   }, [editingId]);
 
-  const submit = async () => {
+  const submit = useCallback(async () => {
+    setSaving(true); setError(null);
     try {
       const payload = { ...form, contact_id: dealContactId ?? undefined } as import("../lib/api").DealPayload;
       if (editingId) {
@@ -129,12 +141,25 @@ export default function Deals() {
       } else {
         await createDeal(payload);
       }
+      setInitialForm(form);
+      toast({ title: t("deals"), description: t("save"), status: "success", duration: 3000, isClosable: true });
       cancel();
       load();
     } catch (e: unknown) {
       setError(String(e));
-    }
-  };
+    } finally { setSaving(false); }
+  }, [form, editingId, dealContactId, t, toast, load]);
+
+  const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const k = String(e.key || "").toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === "s") { e.preventDefault(); if (!saving && (editingId !== null || !!form.title || !!form.stage_id)) submit(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [editingId, form.title, form.stage_id, saving, submit]);
 
   const generateContract = async () => {
     if (!editingId) return;
@@ -248,9 +273,16 @@ export default function Deals() {
 
   return (
     <Box>
-      <Heading size="md" mb={4}>{t("deals")}</Heading>
+      <HStack justify="space-between" mb={4}>
+        <Heading size="md">{t("deals")}</Heading>
+        <HStack>
+          <Button size="sm" variant="ghost" onClick={() => help.open("negocios")}>Ajuda</Button>
+          <Button size="sm" variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={submit} isLoading={saving}>Salvar</Button>
+          {dirty && <Badge colorScheme="orange" variant="solid">Alterações não salvas</Badge>}
+        </HStack>
+      </HStack>
       {error && <Text color="red.500" mb={4}>{error}</Text>}
-      <HStack mb={3}>{canAccess("deals","edit") && <Button onClick={startCreate}>{t("new")}</Button>}</HStack>
+      <HStack mb={3}>{canAccess("deals","edit") && <Button colorScheme="brand" onClick={startCreate}>{t("new")}</Button>}</HStack>
       <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder} mb={4}>
         <Alert status="info" borderRadius="md">
           <AlertIcon />
@@ -275,7 +307,7 @@ export default function Deals() {
             </List>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" onClick={() => {
+            <Button colorScheme="brand" onClick={() => {
               const stageId = stages.find(s => /negocia|prospect|prospec/i.test(s.name))?.id ?? stages[0]?.id;
               const est = 5000;
               const val = 4500;
@@ -294,7 +326,7 @@ export default function Deals() {
               logDealFormExample("negotiation", { stage_id: stageId, estimated_value: est, value: val, email_open_rate: 0.42, interactions_total: 5, docs_shared: true }).catch(() => {});
               learn.onClose();
             }}>{t("apply_example")}</Button>
-            <Button variant="outline" ml={3} onClick={() => {
+            <Button variant="outline" colorScheme="brand" ml={3} onClick={() => {
               const stageId = stages.find(s => /prospec|prospect/i.test(s.name))?.id ?? stages[0]?.id;
               const est = 1200;
               const val = 0;
@@ -313,7 +345,7 @@ export default function Deals() {
               logDealFormExample("prospecting", { stage_id: stageId, estimated_value: est, value: val, email_open_rate: 0.15, interactions_total: 2, docs_shared: false }).catch(() => {});
               learn.onClose();
             }}>{t("apply_prospect_example")}</Button>
-            <Button variant="outline" ml={3} onClick={() => {
+            <Button variant="outline" colorScheme="brand" ml={3} onClick={() => {
               const stageId = stages.find(s => /fech|close|ganh|won|cierre/i.test(s.name))?.id ?? stages[stages.length-1]?.id ?? stages[0]?.id;
               const est = 10000;
               const val = 11500;
@@ -559,6 +591,11 @@ export default function Deals() {
           </ModalContent>
         </Modal>
       </VStack>
+      {!isSmall && (
+        <Box position="fixed" bottom={6} right={6} zIndex={4000}>
+          <Button variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" size="lg" shadow="md" onClick={submit} isLoading={saving}>Salvar</Button>
+        </Box>
+      )}
       <HStack mb={3} spacing={3}>
         <Select value={String(limit)} onChange={(e) => setLimit(Number(e.target.value))} maxW="120px">
           {[10, 20, 50].map(v => <option key={v} value={v}>{v}/página</option>)}

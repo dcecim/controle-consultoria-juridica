@@ -5,18 +5,20 @@ from .database import Base
 from datetime import datetime
 
 class Tenant(Base):
-    __tablename__ = "tenants"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    address = Column(String, nullable=True)
-    responsible_name = Column(String, nullable=True)
-    responsible_oab = Column(String, nullable=True)
-    phone = Column(String, nullable=True)
-    email = Column(String, nullable=True)
-    website = Column(String, nullable=True)
-    instagram = Column(String, nullable=True)
-    linkedin = Column(String, nullable=True)
-    # relationships futuros
+  __tablename__ = "tenants"
+  id = Column(Integer, primary_key=True, index=True)
+  name = Column(String, index=True)
+  address = Column(String, nullable=True)
+  responsible_name = Column(String, nullable=True)
+  responsible_oab = Column(String, nullable=True)
+  phone = Column(String, nullable=True)
+  email = Column(String, nullable=True)
+  website = Column(String, nullable=True)
+  instagram = Column(String, nullable=True)
+  linkedin = Column(String, nullable=True)
+  logo_url = Column(String, nullable=True)
+  session_idle_minutes = Column(Integer, nullable=True, default=4)
+  # relationships futuros
 
 class Organization(Base):
     __tablename__ = "organizations"

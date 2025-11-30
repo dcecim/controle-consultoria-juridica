@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { SimpleGrid, Stat, StatLabel, StatNumber, Box, Heading, Text, useColorModeValue } from "@chakra-ui/react";
+import { SimpleGrid, Stat, StatLabel, StatNumber, Box, Heading, Text, useColorModeValue, HStack, Button } from "@chakra-ui/react";
+import { useHelp } from "../help-context";
 import { getDealsMetrics } from "../lib/api";
 import { useI18n } from "../useI18n";
 
@@ -9,6 +10,7 @@ type Metrics = { by_stage: StageCount[]; by_status: StatusCount[]; conversion_ra
 
 export default function Dashboard() {
   const { t } = useI18n();
+  const help = useHelp();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +26,10 @@ export default function Dashboard() {
 
   return (
     <Box>
-      <Heading size="md" mb={4}>{t("pipeline_metrics")}</Heading>
+      <HStack justify="space-between" mb={4}>
+        <Heading size="md">{t("pipeline_metrics")}</Heading>
+        <Button size="sm" onClick={() => help.open("introducao")}>Ajuda</Button>
+      </HStack>
       {error && <Text color="red.500" mb={4}>{error}</Text>}
       {metrics && (
         <>

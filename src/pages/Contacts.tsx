@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, Select, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter, useColorModeValue } from "@chakra-ui/react";
+import { useEffect, useState, useCallback } from "react";
+import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, Select, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter, useColorModeValue, useMediaQuery, Badge } from "@chakra-ui/react";
+import { useHelp } from "../help-context";
 import { MdInfoOutline } from "react-icons/md";
 import { listContacts, createContact, updateContact, deleteContact, listOrganizations, logContactFormExample } from "../lib/api";
 import { useI18n } from "../useI18n";
@@ -11,12 +12,16 @@ type Org = { id: number; name: string };
 export default function Contacts() {
   const { t } = useI18n();
   const { canAccess } = useAuth();
+  const help = useHelp();
   const learn = useDisclosure();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<Contact>({ id: 0 });
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [initialForm, setInitialForm] = useState<Contact>({ id: 0 });
+  const [saving, setSaving] = useState(false);
+  const [isSmall] = useMediaQuery("(max-width: 768px)");
 
   const load = () => {
     listContacts({ limit: 50, sort_by: "last_name", sort_dir: "asc" }).then((rows) => {
@@ -37,11 +42,12 @@ export default function Contacts() {
 
   useEffect(() => { load(); }, []);
 
-  const startCreate = () => { setEditingId(null); setForm({ id: 0, first_name: "", last_name: "", email: "" }); };
-  const startEdit = (c: Contact) => { setEditingId(c.id); setForm({ ...c }); };
+  const startCreate = () => { const f = { id: 0, first_name: "", last_name: "", email: "" } as Contact; setEditingId(null); setForm(f); setInitialForm(f); };
+  const startEdit = (c: Contact) => { const f = { ...c } as Contact; setEditingId(c.id); setForm(f); setInitialForm(f); };
   const cancel = () => { setEditingId(null); setForm({ id: 0 }); };
 
-  const submit = async () => {
+  const submit = useCallback(async () => {
+    setSaving(true); setError(null);
     try {
       const { id: _unused, ...payload } = form; void _unused;
       if (editingId) {
@@ -49,23 +55,45 @@ export default function Contacts() {
       } else {
         await createContact(payload);
       }
+      setInitialForm(form);
       cancel();
       load();
     } catch (e) { setError(String(e)); }
-  };
+    finally { setSaving(false); }
+  }, [form, editingId]);
 
   const remove = async (id: number) => { await deleteContact(id); load(); };
 
   const bgPanel = useColorModeValue("white","gray.800");
   const borderPanel = useColorModeValue("gray.200","gray.700");
   const tableBg = useColorModeValue("white","gray.800");
+  const btnBg = useColorModeValue("brand.500","brand.600");
+  const btnHoverBg = useColorModeValue("brand.600","brand.500");
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const k = String(e.key || "").toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === "s") { e.preventDefault(); if ((editingId !== null || form.id === 0) && !saving) submit(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [editingId, form.id, saving, submit]);
+
+  const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
 
   return (
     <Box>
-      <Heading size="md" mb={4}>{t("contacts")}</Heading>
+      <HStack justify="space-between" mb={4}>
+        <Heading size="md">{t("contacts")}</Heading>
+        <HStack>
+          <Button size="sm" variant="ghost" onClick={() => help.open("contatos")}>Ajuda</Button>
+          {(editingId !== null || form.id === 0) && <Button size="sm" variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={submit} isLoading={saving}>Salvar</Button>}
+          {dirty && (editingId !== null || form.id === 0) && <Badge colorScheme="orange" variant="solid">Alterações não salvas</Badge>}
+        </HStack>
+      </HStack>
       {error && <Text color="red.500" mb={3}>{error}</Text>}
       <HStack mb={3} spacing={3}>
-        {canAccess("contacts","edit") && <Button onClick={startCreate}>{t("new")}</Button>}
+        {canAccess("contacts","edit") && <Button colorScheme="brand" onClick={startCreate}>{t("new")}</Button>}
       </HStack>
       {editingId !== null || form.id === 0 ? (
         <VStack align="stretch" spacing={3} bg={bgPanel} p={4} borderRadius="md" border="1px solid" borderColor={borderPanel} mb={4}>
@@ -91,19 +119,19 @@ export default function Contacts() {
                 </VStack>
               </ModalBody>
               <ModalFooter>
-                <Button colorScheme="blue" onClick={() => {
+                <Button colorScheme="brand" onClick={() => {
                   const orgId = orgs[0]?.id;
                   setForm({ id: form.id, first_name: form.first_name || "Ana", last_name: form.last_name || "Silva", email: form.email || "ana.silva@example.com", organization_id: orgId, client_type: form.client_type || "Pessoa Física", lead_source: form.lead_source || "Indicação" });
                   logContactFormExample("pf_indicacao", { organization_id: orgId, client_type: "Pessoa Física", lead_source: "Indicação" }).catch(() => {});
                   learn.onClose();
                 }}>{t("contacts_apply_example_1")}</Button>
-                <Button variant="outline" ml={3} onClick={() => {
+                <Button variant="outline" colorScheme="brand" ml={3} onClick={() => {
                   const orgId = orgs[0]?.id;
                   setForm({ id: form.id, first_name: form.first_name || "Carlos", last_name: form.last_name || "Pereira", email: form.email || "c.pereira@empresa.com", organization_id: orgId, client_type: form.client_type || "Pessoa Jurídica", lead_source: form.lead_source || "Website" });
                   logContactFormExample("pj_site", { organization_id: orgId, client_type: "Pessoa Jurídica", lead_source: "Website" }).catch(() => {});
                   learn.onClose();
                 }}>{t("contacts_apply_example_2")}</Button>
-                <Button variant="outline" ml={3} onClick={() => {
+                <Button variant="outline" colorScheme="brand" ml={3} onClick={() => {
                   setForm({ id: form.id, first_name: form.first_name || "Maria", last_name: form.last_name || "Gomez", email: form.email || "maria.gomez@example.org", organization_id: undefined, client_type: form.client_type || "Pessoa Física", lead_source: form.lead_source || "Evento" });
                   logContactFormExample("pf_evento", { client_type: "Pessoa Física", lead_source: "Evento" }).catch(() => {});
                   learn.onClose();
@@ -176,7 +204,7 @@ export default function Contacts() {
             <FormHelperText>{t("lead_source_help")}</FormHelperText>
           </FormControl>
           <HStack>
-            <Button colorScheme="blue" onClick={submit} isDisabled={!canAccess("contacts","edit")}>{t("save")}</Button>
+            <Button variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={submit} isDisabled={!canAccess("contacts","edit")} isLoading={saving}>{t("save")}</Button>
             <Button variant="outline" onClick={cancel}>{t("cancel")}</Button>
           </HStack>
         </VStack>
@@ -208,6 +236,11 @@ export default function Contacts() {
           ))}
         </Tbody>
       </Table>
+      {!isSmall && (editingId !== null || form.id === 0) && (
+        <Box position="fixed" bottom={6} right={6} zIndex={4000}>
+          <Button variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" size="lg" shadow="md" onClick={submit} isLoading={saving}>Salvar</Button>
+        </Box>
+      )}
     </Box>
   );
 }

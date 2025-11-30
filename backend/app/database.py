@@ -92,6 +92,8 @@ def apply_minimal_schema_patch(engine):
             conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS website VARCHAR;")
             conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS instagram VARCHAR;")
             conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS linkedin VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS logo_url VARCHAR;")
+            conn.exec_driver_sql("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS session_idle_minutes INTEGER DEFAULT 4;")
             # organizations
             conn.exec_driver_sql("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS sector VARCHAR;")
             # contacts

@@ -12,6 +12,7 @@ except Exception:
 import smtplib
 from email.message import EmailMessage
 import base64
+from fastapi.responses import HTMLResponse
 try:
     import qrcode  # type: ignore
 except Exception:
@@ -169,6 +170,35 @@ def mfa_setup(authorization: str | None = Header(default=None, alias="Authorizat
         img.save(buf, format="PNG")
         qr_b64 = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
     return {"otpauth_uri": uri, "secret": secret, "qr_base64": qr_b64}
+
+@router.get("/mfa/qr", response_class=HTMLResponse)
+def mfa_qr(token: str, db: Session = Depends(get_db)):
+    user_id = _tokens.get(token)
+    if not user_id:
+        return "<html><body><h3>Token inválido</h3></body></html>"
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user or not user.mfa_secret:
+        return "<html><body><h3>MFA não configurado para este usuário</h3></body></html>"
+    issuer = os.getenv("MFA_ISSUER", "Consultor Juridico")
+    uri = pyotp.totp.TOTP(user.mfa_secret).provisioning_uri(name=user.email or f"user-{user.id}", issuer_name=issuer) if pyotp else None
+    qr_b64 = None
+    if qrcode is not None and uri is not None:
+        import io
+        img = qrcode.make(uri)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        qr_b64 = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+    html = ["<html><body>"]
+    html.append("<h2>Configurar Autenticador (TOTP)</h2>")
+    html.append(f"<p>Secret: <code>{user.mfa_secret}</code></p>")
+    if uri:
+        html.append(f"<p>otpauth URI: <code>{uri}</code></p>")
+    if qr_b64:
+        html.append(f"<img alt='QR' src='{qr_b64}' />")
+    else:
+        html.append("<p>QR não disponível. Copie a URI acima no app autenticador.</p>")
+    html.append("</body></html>")
+    return "".join(html)
 
 def _send_email_otp(to_email: str | None, code: str):
     if not to_email:

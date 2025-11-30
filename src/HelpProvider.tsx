@@ -2,14 +2,12 @@ import React from "react";
 import { useLocation } from "react-router-dom";
 import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, Box, Heading, Text, Link, VStack } from "@chakra-ui/react";
 import { manualSections, routeToSection } from "./manual/content";
-import { useAuth } from "./useAuth";
 import { HelpContext } from "./help-context";
 
 export default function HelpProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setOpen] = React.useState(false);
   const [sectionId, setSectionId] = React.useState<string | undefined>(undefined);
   const location = useLocation();
-  const { user } = useAuth();
 
   const open = (sid?: string) => { setSectionId(sid); setOpen(true); };
   const close = () => setOpen(false);
@@ -21,11 +19,11 @@ export default function HelpProvider({ children }: { children: React.ReactNode }
   }, [location.pathname]);
 
   React.useEffect(() => {
-    const email = user?.email || "guest";
-    const key = `manual:seen:${email}`;
+    const tenantId = Number(localStorage.getItem("tenantId") || 1);
+    const key = `manual:seen:${tenantId}:${location.pathname}`;
     const seen = localStorage.getItem(key);
     if (!seen) { const mapped = routeToSection[location.pathname] || "introducao"; open(mapped); localStorage.setItem(key, "true"); }
-  }, [user?.email]);
+  }, [location.pathname]);
 
   const selected = manualSections.find(s => s.id === sectionId) || manualSections[0];
 

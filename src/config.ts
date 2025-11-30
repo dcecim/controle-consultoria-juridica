@@ -6,7 +6,7 @@ const TENANT_ID = Number((import.meta as unknown as { env?: Record<string, unkno
 
 export function getHeaders() {
   const actor = localStorage.getItem("actor") || "admin";
-  const token = localStorage.getItem("token") || "";
+  const token = (typeof sessionStorage !== "undefined" ? (sessionStorage.getItem("token") || "") : "") || (localStorage.getItem("token") || "");
   return {
     "X-Actor": actor,
     "X-Tenant-ID": String(TENANT_ID),

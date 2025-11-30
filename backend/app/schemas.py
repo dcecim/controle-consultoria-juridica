@@ -4,15 +4,17 @@ from typing import Any, Optional, Dict, List
 from datetime import datetime
 
 class TenantBase(BaseModel):
-    name: str
-    address: Optional[str] = None
-    responsible_name: Optional[str] = None
-    responsible_oab: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    website: Optional[str] = None
-    instagram: Optional[str] = None
-    linkedin: Optional[str] = None
+  name: str
+  address: Optional[str] = None
+  responsible_name: Optional[str] = None
+  responsible_oab: Optional[str] = None
+  phone: Optional[str] = None
+  email: Optional[str] = None
+  website: Optional[str] = None
+  instagram: Optional[str] = None
+  linkedin: Optional[str] = None
+  logo_url: Optional[str] = None
+  session_idle_minutes: Optional[int] = None
 
 class TenantCreate(TenantBase):
     pass
@@ -22,15 +24,17 @@ class Tenant(TenantBase):
     model_config = ConfigDict(from_attributes=True)
 
 class TenantUpdate(BaseModel):
-    name: Optional[str] = None
-    address: Optional[str] = None
-    responsible_name: Optional[str] = None
-    responsible_oab: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    website: Optional[str] = None
-    instagram: Optional[str] = None
-    linkedin: Optional[str] = None
+  name: Optional[str] = None
+  address: Optional[str] = None
+  responsible_name: Optional[str] = None
+  responsible_oab: Optional[str] = None
+  phone: Optional[str] = None
+  email: Optional[str] = None
+  website: Optional[str] = None
+  instagram: Optional[str] = None
+  linkedin: Optional[str] = None
+  logo_url: Optional[str] = None
+  session_idle_minutes: Optional[int] = None
 
 class OrganizationBase(BaseModel):
     name: str

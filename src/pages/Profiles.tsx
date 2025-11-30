@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Select, Checkbox, Button, Text, HStack, Input, FormControl, FormLabel, useColorModeValue } from "@chakra-ui/react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Select, Checkbox, Button, Text, HStack, Input, FormControl, FormLabel, useColorModeValue, useToast, useMediaQuery, Badge } from "@chakra-ui/react";
+import { useHelp } from "../help-context";
 import { useI18n } from "../useI18n";
 import { getRolePermissions, setRolePermissions, listProfiles, createProfile, deleteProfile, syncRBACFromLocalToServer } from "../lib/api";
 
@@ -10,6 +11,9 @@ type Action = typeof ALL_ACTIONS[number];
 
 export default function Profiles() {
   const { t } = useI18n();
+  const help = useHelp();
+  const toast = useToast();
+  const [isSmall] = useMediaQuery("(max-width: 768px)");
   const [role, setRole] = useState<Role>("Master");
   const [profiles, setProfiles] = useState<Array<{ id: number; name: string; code?: string }>>([]);
   const [newProfile, setNewProfile] = useState<{ name: string; code?: string }>({ name: "", code: "" });
@@ -39,12 +43,16 @@ export default function Profiles() {
     return defaultPerms;
   };
   const [perms, setPerms] = useState<Record<Feature, Action[]>>(() => calcPerms(role));
+  const [initialPerms, setInitialPerms] = useState<Record<Feature, Action[]>>(() => calcPerms(role));
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const panelBg = useColorModeValue("white","gray.800");
   const panelBorder = useColorModeValue("gray.200","gray.700");
   const tableBg = useColorModeValue("white","gray.800");
+  const btnBg = useColorModeValue("brand.500","brand.600");
+  const btnHoverBg = useColorModeValue("brand.600","brand.500");
 
   useEffect(() => { /* noop to satisfy hook rules */ }, []);
 
@@ -75,23 +83,40 @@ export default function Profiles() {
         const server = await getRolePermissions(role);
         const map = Object.fromEntries(features.map(f => [f, (server[f] || defaultPerms[f]) as Action[]])) as Record<Feature, Action[]>;
         setPerms(map);
+        setInitialPerms(map);
       } catch (e) { setError(String(e)); }
     };
     void loadPerms();
   }, [role, features, defaultPerms]);
 
-  const save = async () => {
+  const save = useCallback(async () => {
+    setSaving(true); setError(null); setSuccess(null);
     try {
       const toSave: Record<string, string[]> = {};
       features.forEach(f => { toSave[f] = perms[f] as string[]; });
       await setRolePermissions(role, toSave);
       const tenantId = Number(localStorage.getItem("tenantId") || 1);
       localStorage.setItem(`tenant:${tenantId}:role:${role}:permissions`, JSON.stringify(toSave));
+      setInitialPerms(perms);
       setSuccess(t("save") || "Salvo");
+      toast({ title: t("profiles_admin") || "Perfis", description: t("save") || "Salvo", status: "success", duration: 3000, isClosable: true });
     } catch (e) {
-      setError(String(e));
+      const msg = String(e);
+      setError(msg);
+      toast({ title: t("profiles_admin") || "Perfis", description: msg, status: "error", duration: 5000, isClosable: true });
+    } finally {
+      setSaving(false);
     }
-  };
+  }, [features, perms, role, t, toast]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const k = String(e.key || "").toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === "s") { e.preventDefault(); if (!saving) save(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [saving, save]);
 
   const addProfile = async () => {
     if (!newProfile.name.trim()) return;
@@ -107,7 +132,14 @@ export default function Profiles() {
 
   return (
     <Box>
-      <Heading size="md" mb={4}>{t("profiles_admin") || "Perfis e Permissões"}</Heading>
+      <HStack justify="space-between" mb={4}>
+        <Heading size="md">{t("profiles_admin") || "Perfis e Permissões"}</Heading>
+        <HStack>
+          <Button size="sm" variant="ghost" onClick={() => help.open("perfis")}>Ajuda</Button>
+          <Button size="sm" variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={save} isLoading={saving}>Salvar</Button>
+          {JSON.stringify(perms) !== JSON.stringify(initialPerms) && <Badge colorScheme="orange" variant="solid">Alterações não salvas</Badge>}
+        </HStack>
+      </HStack>
       <Select maxW="240px" mb={3} value={role} onChange={(e) => { const r = e.target.value as Role; setRole(r); setPerms(calcPerms(r)); setError(null); setSuccess(null); }}>
         <option value="Master">Master</option>
         <option value="Projetista">Projetista</option>
@@ -157,7 +189,12 @@ export default function Profiles() {
           ))}
         </Tbody>
       </Table>
-      <Button colorScheme="blue" mt={3} onClick={save}>{t("save")}</Button>
+      <Button variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" mt={3} onClick={save} isLoading={saving}>{t("save")}</Button>
+      {!isSmall && (
+        <Box position="fixed" bottom={6} right={6} zIndex={4000}>
+          <Button variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" size="lg" shadow="md" onClick={save} isLoading={saving}>Salvar</Button>
+        </Box>
+      )}
       <Button variant="outline" mt={3} ml={3} onClick={async () => { setError(null); setSuccess(null); try { const r = await syncRBACFromLocalToServer(); setSuccess(`${t("synced") || "Sincronizado"}: ${r.profiles} ${t("profiles_admin") || "Perfis"}, ${r.roles} ${t("feature") || "Funcionalidades"}, ${r.users} ${t("users") || "Usuários"}`); } catch (e) { setError(String(e)); } }}>{t("sync") || "Sincronizar"}</Button>
     </Box>
   );

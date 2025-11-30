@@ -1,22 +1,35 @@
 import { useState } from "react";
-import { Box, Heading, VStack, FormControl, FormLabel, Input, Button, Text, useColorModeValue } from "@chakra-ui/react";
-import { verifyMfa } from "../lib/api";
+import { Box, Heading, VStack, FormControl, FormLabel, Input, Button, Text, useColorModeValue, HStack, Alert, AlertIcon, useToast } from "@chakra-ui/react";
+import { useHelp } from "../help-context";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../useAuth";
 import { useI18n } from "../useI18n";
 
 export default function Login() {
   const { t } = useI18n();
-  const { login } = useAuth();
+  const { login, completeMfa } = useAuth();
+  const help = useHelp();
   const navigate = useNavigate();
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState<string>("");
+  const [expired] = useState<string | null>(() => {
+    try {
+      const flag = sessionStorage.getItem("session:expired");
+      if (flag) {
+        sessionStorage.removeItem("session:expired");
+        return flag;
+      }
+    } catch (e) { void e; }
+    return null;
+  });
 
   const panelBg = useColorModeValue("white","gray.800");
   const panelBorder = useColorModeValue("gray.200","gray.700");
+
 
   const submit = async () => {
     setError(null);
@@ -28,6 +41,7 @@ export default function Login() {
       if (res?.must_change_password) {
         navigate("/change-password");
       } else {
+        toast({ title: t("login") || "Login", description: "Login bem sucedido", status: "success", duration: 3000, isClosable: true });
         navigate("/");
       }
     } catch (e) {
@@ -39,14 +53,23 @@ export default function Login() {
     setError(null);
     try {
       if (!mfaToken || !mfaCode) { setError("Informe o código MFA"); return; }
-      const res = await verifyMfa({ mfa_token: mfaToken, code: mfaCode });
-      if (res?.must_change_password) { navigate("/change-password"); } else { navigate("/"); }
+      const res = await completeMfa({ mfa_token: mfaToken, code: mfaCode });
+      if (res?.must_change_password) { navigate("/change-password"); } else { toast({ title: t("login") || "Login", description: "Login bem sucedido", status: "success", duration: 3000, isClosable: true }); navigate("/"); }
     } catch (e) { setError(String(e)); }
   };
 
   return (
     <Box>
-      <Heading size="md" mb={4}>{t("login") || "Login"}</Heading>
+      <HStack justify="space-between" mb={4}>
+        <Heading size="md">{t("login") || "Login"}</Heading>
+        <Button size="sm" onClick={() => help.open("login_mfa")}>Ajuda</Button>
+      </HStack>
+      {expired && (
+        <Alert status="warning" borderRadius="md" mb={3}>
+          <AlertIcon />
+          Sessão expirada por inatividade. Faça login novamente.
+        </Alert>
+      )}
       <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder}>
         <FormControl>
           <FormLabel>{t("email") || "E-mail"}</FormLabel>

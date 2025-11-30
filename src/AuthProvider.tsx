@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { login as apiLogin, getMe, getRolePermissions } from "./lib/api";
+import { login as apiLogin, verifyMfa, getMe, getRolePermissions } from "./lib/api";
 import { AuthContext } from "./auth-context";
 import type { AuthContextValue } from "./auth-context";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthContextValue["user"]>(null);
-  const [role, setRole] = useState<string | null>(localStorage.getItem("actor") || null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem("token") || null);
+  const [role, setRole] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>((typeof sessionStorage !== "undefined" ? (sessionStorage.getItem("token") || null) : null));
 
   useEffect(() => {
     if (token) {
       getMe().then((me) => {
-        const r = (me?.role || role || "Master") as string;
+        const r = (me?.role || role || "Guest") as string;
         setUser(me || null);
         setRole(r);
         localStorage.setItem("actor", r);
@@ -25,13 +25,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const res = await apiLogin({ email, password });
+    applyAuth(res);
+    return res;
+  };
+
+  const applyAuth = (res: Awaited<ReturnType<typeof apiLogin>>) => {
     const t = res?.token || res?.access_token || "";
     const u: NonNullable<AuthContextValue["user"]> = { id: res?.user?.id ?? 0, name: res?.user?.name, email: res?.user?.email, role: res?.user?.role || res?.role };
     const r = u.role || "Master";
     setToken(t);
-    localStorage.setItem("token", t);
-    try { localStorage.setItem("lastLoginEmail", email); } catch { void 0; }
-    try { localStorage.removeItem(`manual:seen:${email}`); } catch { void 0; }
+    try { sessionStorage.setItem("token", t); } catch { void 0; }
     setUser(u);
     setRole(r);
     localStorage.setItem("actor", r);
@@ -39,6 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getRolePermissions(r).then((perms) => {
       try { localStorage.setItem(`tenant:${tenantId}:role:${r}:permissions`, JSON.stringify(perms)); } catch { void 0; }
     }).catch(() => {});
+  };
+
+  const completeMfa = async (payload: { mfa_token: string; code: string }) => {
+    const res = await verifyMfa(payload);
+    applyAuth(res);
     return res;
   };
 
@@ -46,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setRole(null);
     setToken(null);
+    try { sessionStorage.removeItem("token"); } catch { void 0; }
     localStorage.removeItem("token");
     localStorage.removeItem("actor");
   };
@@ -76,6 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return base.includes(action);
   };
 
-  const value: AuthContextValue = { user, role, token, login, logout, canAccess };
+  const value: AuthContextValue = { user, role, token, login, completeMfa, logout, canAccess };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

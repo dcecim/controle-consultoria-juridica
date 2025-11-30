@@ -6,6 +6,7 @@ export type AuthContextValue = {
   role: string | null;
   token: string | null;
   login: (email: string, password: string) => Promise<import("./lib/api").LoginResponse>;
+  completeMfa: (payload: { mfa_token: string; code: string }) => Promise<import("./lib/api").LoginResponse>;
   logout: () => void;
   canAccess: (feature: string, action?: string) => boolean;
 };

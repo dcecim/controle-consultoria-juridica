@@ -12,7 +12,7 @@ export default function NavBar() {
   const location = useLocation();
   const tenantId = Number(localStorage.getItem("tenantId") || 1);
   const { t, lang, setLang } = useI18n();
-  const { role, logout, canAccess } = useAuth();
+  const { role, logout, canAccess, token } = useAuth();
   const [currency, setCurrencyState] = React.useState<string>(getCurrency());
   const [tenants, setTenants] = React.useState<Array<{ id: number; name: string }>>([]);
   const [tenant, setTenant] = React.useState<number>(tenantId);
@@ -41,6 +41,8 @@ export default function NavBar() {
   const sideBorder = useColorModeValue("gray.200", "gray.700");
   const themeName = (localStorage.getItem("themeName") || "light");
   const setThemeName = (name: string) => { localStorage.setItem("themeName", name); window.dispatchEvent(new Event("theme:change")); };
+  const isAuthed = !!token || (typeof sessionStorage !== "undefined" && !!sessionStorage.getItem("token"));
+  const creditColor = useColorModeValue("gray.600","gray.300");
   return (
     <Box bg={sideBg} borderRight="1px solid" borderColor={sideBorder} minH="100vh" w="260px" position="sticky" top={0}>
       <VStack align="stretch" spacing={3} px={4} py={4}>
@@ -48,13 +50,13 @@ export default function NavBar() {
         <Divider />
         {canAccess("dashboard") && (
           <Tooltip label={t("dashboard")} placement="right" hasArrow>
-            <Button as={RouterLink} to="/" leftIcon={<Icon as={MdDashboard} />} variant={location.pathname === "/" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("dashboard")}</Button>
+            <Button as={RouterLink} to="/" leftIcon={<Icon as={MdDashboard} />} variant={location.pathname === "/" ? "solid" : "ghost"} colorScheme="brand" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("dashboard")}</Button>
           </Tooltip>
         )}
         {canAccess("deals") && (
           <Tooltip label={t("deals")} placement="right" hasArrow>
             <Box position="relative">
-              <Button as={RouterLink} to="/deals" leftIcon={<Icon as={MdList} />} variant={location.pathname === "/deals" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/deals" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("deals")}</Button>
+              <Button as={RouterLink} to="/deals" leftIcon={<Icon as={MdList} />} variant={location.pathname === "/deals" ? "solid" : "ghost"} colorScheme="brand" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/deals" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("deals")}</Button>
               {dealsMissingOrg > 0 && (
                 <Badge position="absolute" top={1} right={2} colorScheme="orange" borderRadius="full">{dealsMissingOrg}</Badge>
               )}
@@ -64,7 +66,7 @@ export default function NavBar() {
         {canAccess("upload") && (
           <Tooltip label={t("upload")} placement="right" hasArrow>
             <Box position="relative">
-              <Button as={RouterLink} to="/upload" leftIcon={<Icon as={MdUpload} />} variant={location.pathname === "/upload" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/upload" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("upload")}</Button>
+              <Button as={RouterLink} to="/upload" leftIcon={<Icon as={MdUpload} />} variant={location.pathname === "/upload" ? "solid" : "ghost"} colorScheme="brand" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/upload" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("upload")}</Button>
               {pendingUploads > 0 && (
                 <Badge position="absolute" top={1} right={2} colorScheme="red" borderRadius="full">{pendingUploads}</Badge>
               )}
@@ -74,7 +76,7 @@ export default function NavBar() {
         {canAccess("contacts") && (
           <Tooltip label={t("contacts")} placement="right" hasArrow>
             <Box position="relative">
-              <Button as={RouterLink} to="/contacts" leftIcon={<Icon as={MdContacts} />} variant={location.pathname === "/contacts" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/contacts" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("contacts")}</Button>
+              <Button as={RouterLink} to="/contacts" leftIcon={<Icon as={MdContacts} />} variant={location.pathname === "/contacts" ? "solid" : "ghost"} colorScheme="brand" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/contacts" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("contacts")}</Button>
               {contactsMissingEmail > 0 && (
                 <Badge position="absolute" top={1} right={2} colorScheme="purple" borderRadius="full">{contactsMissingEmail}</Badge>
               )}
@@ -83,32 +85,32 @@ export default function NavBar() {
         )}
         {canAccess("organizations") && (
           <Tooltip label={t("organizations")} placement="right" hasArrow>
-            <Button as={RouterLink} to="/organizations" leftIcon={<Icon as={MdBusiness} />} variant={location.pathname === "/organizations" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/organizations" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("organizations")}</Button>
+            <Button as={RouterLink} to="/organizations" leftIcon={<Icon as={MdBusiness} />} variant={location.pathname === "/organizations" ? "solid" : "ghost"} colorScheme="brand" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/organizations" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("organizations")}</Button>
           </Tooltip>
         )}
         {canAccess("stages") && (
           <Tooltip label={t("stages")} placement="right" hasArrow>
-            <Button as={RouterLink} to="/stages" leftIcon={<Icon as={MdTimeline} />} variant={location.pathname === "/stages" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/stages" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("stages")}</Button>
+            <Button as={RouterLink} to="/stages" leftIcon={<Icon as={MdTimeline} />} variant={location.pathname === "/stages" ? "solid" : "ghost"} colorScheme="brand" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/stages" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("stages")}</Button>
           </Tooltip>
         )}
         {canAccess("business_types") && (
           <Tooltip label={t("business_types") || "Tipos de Negócio"} placement="right" hasArrow>
-            <Button as={RouterLink} to="/business-types" leftIcon={<Icon as={MdCategory} />} variant={location.pathname === "/business-types" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/business-types" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("business_types") || "Tipos de Negócio"}</Button>
+            <Button as={RouterLink} to="/business-types" leftIcon={<Icon as={MdCategory} />} variant={location.pathname === "/business-types" ? "solid" : "ghost"} colorScheme="brand" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/business-types" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("business_types") || "Tipos de Negócio"}</Button>
           </Tooltip>
         )}
         {canAccess("profiles_admin") && (
           <Tooltip label={t("profiles_admin") || "Perfis"} placement="right" hasArrow>
-            <Button as={RouterLink} to="/profiles" leftIcon={<Icon as={MdAdminPanelSettings} />} variant={location.pathname === "/profiles" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/profiles" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("profiles_admin") || "Perfis"}</Button>
+            <Button as={RouterLink} to="/profiles" leftIcon={<Icon as={MdAdminPanelSettings} />} variant={location.pathname === "/profiles" ? "solid" : "ghost"} colorScheme="brand" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/profiles" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("profiles_admin") || "Perfis"}</Button>
           </Tooltip>
         )}
         {canAccess("profiles_admin") && (
           <Tooltip label={"Empresa"} placement="right" hasArrow>
-            <Button as={RouterLink} to="/tenant" leftIcon={<Icon as={MdHomeWork} />} variant={location.pathname === "/tenant" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/tenant" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>Empresa</Button>
+            <Button as={RouterLink} to="/tenant" leftIcon={<Icon as={MdHomeWork} />} variant={location.pathname === "/tenant" ? "solid" : "ghost"} colorScheme="brand" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/tenant" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>Empresa</Button>
           </Tooltip>
         )}
         {canAccess("profiles_admin") && (
           <Tooltip label={t("users") || "Usuários"} placement="right" hasArrow>
-            <Button as={RouterLink} to="/users" leftIcon={<Icon as={MdPeople} />} variant={location.pathname === "/users" ? "solid" : "ghost"} colorScheme="blue" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/users" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("users") || "Usuários"}</Button>
+            <Button as={RouterLink} to="/users" leftIcon={<Icon as={MdPeople} />} variant={location.pathname === "/users" ? "solid" : "ghost"} colorScheme="brand" justifyContent="flex-start" size="sm" w="full" aria-current={location.pathname === "/users" ? "page" : undefined} _hover={{ bg: "gray.100" }} _focusVisible={{ boxShadow: "0 0 0 3px rgba(66,153,225,0.6)" }} _active={{ bg: "gray.200" }}>{t("users") || "Usuários"}</Button>
           </Tooltip>
         )}
         <Divider />
@@ -134,9 +136,11 @@ export default function NavBar() {
           <option value="ocean">Oceano</option>
         </Select>
         <Text>Perfil: {role || "Guest"}</Text>
-        {!localStorage.getItem("token") && <Button size="sm" as={RouterLink} to="/login">{t("login") || "Login"}</Button>}
-        {localStorage.getItem("token") && <Button size="sm" variant="outline" onClick={logout}>Sair</Button>}
+        <Button size="sm" as={RouterLink} to="/login">{t("login") || "Login"}</Button>
+        {isAuthed ? <Button size="sm" variant="outline" onClick={logout}>Sair</Button> : null}
         <IconButton aria-label="Atualizar" icon={<MdRefresh />} />
+        <Divider />
+        <Text fontSize="xs" color={creditColor}>Crédito: Diretoria de Informática da Cecim Advogados</Text>
       </VStack>
     </Box>
   );

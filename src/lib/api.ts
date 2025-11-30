@@ -50,7 +50,7 @@ export async function getDealsMetrics() {
   }
 }
 
-export type TenantRow = { id: number; name: string };
+export type TenantRow = { id: number; name: string; logo_url?: string; session_idle_minutes?: number };
 export async function listTenants(): Promise<TenantRow[]> {
   try {
     const res = await fetch(`${API_URL}/tenants`, { headers: { ...getHeaders() } });
@@ -65,12 +65,12 @@ export async function listTenants(): Promise<TenantRow[]> {
   }
 }
 
-export async function getTenant(id: number): Promise<TenantRow & { address?: string; responsible_name?: string; responsible_oab?: string; phone?: string; email?: string; website?: string; instagram?: string; linkedin?: string }>{
+export async function getTenant(id: number): Promise<TenantRow & { address?: string; responsible_name?: string; responsible_oab?: string; phone?: string; email?: string; website?: string; instagram?: string; linkedin?: string }> {
   const res = await fetch(`${API_URL}/tenants/${id}`, { headers: { ...getHeaders() } });
   return handleResponse(res);
 }
 
-export async function updateTenant(id: number, payload: { name?: string; address?: string; responsible_name?: string; responsible_oab?: string; phone?: string; email?: string; website?: string; instagram?: string; linkedin?: string }): Promise<TenantRow>{
+export async function updateTenant(id: number, payload: { name?: string; address?: string; responsible_name?: string; responsible_oab?: string; phone?: string; email?: string; website?: string; instagram?: string; linkedin?: string; logo_url?: string; session_idle_minutes?: number }): Promise<TenantRow>{
   const res = await fetch(`${API_URL}/tenants/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", ...getHeaders() }, body: JSON.stringify(payload) });
   return handleResponse(res);
 }

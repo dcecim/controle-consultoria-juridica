@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, Select, FormControl, FormLabel, Checkbox, useColorModeValue, Image } from "@chakra-ui/react";
+import { useEffect, useState, useCallback } from "react";
+import { Box, Heading, HStack, Button, Table, Thead, Tbody, Tr, Th, Td, Text, VStack, Input, Select, FormControl, FormLabel, Checkbox, useColorModeValue, Image, useToast, useMediaQuery, Badge } from "@chakra-ui/react";
+import { useHelp } from "../help-context";
 import { useI18n } from "../useI18n";
 import { listUsers, createUser, updateUser, deleteUser, syncRBACFromLocalToServer, setupMfa } from "../lib/api";
 import { useAuth } from "../useAuth";
@@ -9,11 +10,18 @@ type UserRow = { id: number; name?: string; email: string; role: string; phone?:
 export default function Users() {
   const { t } = useI18n();
   const { canAccess } = useAuth();
+  const help = useHelp();
+  const toast = useToast();
   const [rows, setRows] = useState<UserRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<UserRow & { password?: string; must_change_password?: boolean; mfa_enabled?: boolean; mfa_method?: string }>({ id: 0, name: "", email: "", role: "Guest", password: "", must_change_password: true, mfa_enabled: false, mfa_method: "totp", phone: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [qr, setQr] = useState<{ otpauth_uri: string; secret: string; qr_base64?: string } | null>(null);
+  const [initialForm, setInitialForm] = useState<typeof form>(form);
+  const [saving, setSaving] = useState(false);
+  const [isSmall] = useMediaQuery("(max-width: 768px)");
+  const btnBg = useColorModeValue("brand.500","brand.600");
+  const btnHoverBg = useColorModeValue("brand.600","brand.500");
 
   const panelBg = useColorModeValue("white","gray.800");
   const panelBorder = useColorModeValue("gray.200","gray.700");
@@ -22,31 +30,57 @@ export default function Users() {
   const load = () => { listUsers().then(setRows).catch((e) => setError(String(e))); };
   useEffect(() => { load(); }, []);
 
-  const startCreate = () => { setEditingId(null); setForm({ id: 0, name: "", email: "", role: "Guest", password: "", must_change_password: true, mfa_enabled: false, mfa_method: "totp", phone: "" }); };
-  const startEdit = (u: UserRow) => { setEditingId(u.id); setForm({ ...u, password: "", must_change_password: false, mfa_enabled: false, mfa_method: "totp" }); setQr(null); };
+  const startCreate = () => { const f = { id: 0, name: "", email: "", role: "Guest", password: "", must_change_password: true, mfa_enabled: false, mfa_method: "totp", phone: "" } as typeof form; setEditingId(null); setForm(f); setInitialForm(f); };
+  const startEdit = (u: UserRow) => { const f = { ...u, password: "", must_change_password: false, mfa_enabled: false, mfa_method: "totp" } as typeof form; setEditingId(u.id); setForm(f); setInitialForm(f); setQr(null); };
   const cancel = () => { setEditingId(null); setForm({ id: 0, name: "", email: "", role: "Guest", password: "", must_change_password: true, mfa_enabled: false, mfa_method: "totp", phone: "" }); };
 
-  const submit = async () => {
+  const submit = useCallback(async () => {
+    setSaving(true); setError(null);
     try {
       const { id: _unused, ...payload } = form; void _unused;
       if (editingId) await updateUser(editingId, payload); else {
         const created = await createUser(payload);
         if (created.temporary_password) {
           setError(null);
-          // mostra senha temporária
           alert(`${t("temporary_password") || "Senha temporária"}: ${created.temporary_password}`);
         }
       }
+      setInitialForm(form);
+      toast({ title: t("users") || "Usuários", description: t("save") || "Salvo", status: "success", duration: 3000, isClosable: true });
       cancel();
       load();
-    } catch (e) { setError(String(e)); }
-  };
+    } catch (e) {
+      const msg = String(e);
+      setError(msg);
+      toast({ title: t("users") || "Usuários", description: msg, status: "error", duration: 5000, isClosable: true });
+    } finally {
+      setSaving(false);
+    }
+  }, [form, editingId, t, toast]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const k = String(e.key || "").toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === "s") { e.preventDefault(); if ((editingId !== null || form.id === 0) && !saving) submit(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [editingId, form.id, saving, submit]);
+
+  const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
 
   const remove = async (id: number) => { await deleteUser(id); load(); };
 
   return (
     <Box>
-      <Heading size="md" mb={4}>{t("users") || "Usuários"}</Heading>
+      <HStack justify="space-between" mb={4}>
+        <Heading size="md">{t("users") || "Usuários"}</Heading>
+        <HStack>
+          <Button size="sm" variant="ghost" onClick={() => help.open("usuarios_mfa")}>Ajuda</Button>
+          {(editingId !== null || form.id === 0) && <Button size="sm" variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={submit} isLoading={saving}>Salvar</Button>}
+          {dirty && (editingId !== null || form.id === 0) && <Badge colorScheme="orange" variant="solid">Alterações não salvas</Badge>}
+        </HStack>
+      </HStack>
       {error && <Text color="red.500" mb={3}>{error}</Text>}
       <HStack mb={3} spacing={3}>{canAccess("profiles_admin","edit") && <Button onClick={startCreate}>{t("new")}</Button>}</HStack>
       {(editingId !== null || form.id === 0) && (
@@ -95,7 +129,7 @@ export default function Users() {
             <FormLabel ml={2}>{t("must_change_password") || "Deve trocar a senha no primeiro login"}</FormLabel>
           </FormControl>
           <HStack>
-            <Button colorScheme="blue" onClick={submit} isDisabled={!canAccess("profiles_admin","edit")}>{t("save")}</Button>
+            <Button variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={submit} isDisabled={!canAccess("profiles_admin","edit")} isLoading={saving}>{t("save")}</Button>
             <Button variant="outline" onClick={cancel}>{t("cancel")}</Button>
           </HStack>
           {form.mfa_method === "totp" && (
@@ -142,6 +176,11 @@ export default function Users() {
       <HStack mt={3} spacing={3}>
         <Button variant="outline" onClick={async () => { setError(null); try { const r = await syncRBACFromLocalToServer(); alert(`${t("synced") || "Sincronizado"}: ${r.users} ${t("users") || "Usuários"}`); } catch (e) { setError(String(e)); } }}>{t("sync") || "Sincronizar"}</Button>
       </HStack>
+      {!isSmall && (editingId !== null || form.id === 0) && (
+        <Box position="fixed" bottom={6} right={6} zIndex={4000}>
+          <Button variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" size="lg" shadow="md" onClick={submit} isLoading={saving}>Salvar</Button>
+        </Box>
+      )}
     </Box>
   );
 }

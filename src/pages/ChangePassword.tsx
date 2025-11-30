@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Box, Heading, VStack, FormControl, FormLabel, Input, Button, Text } from "@chakra-ui/react";
+import { Box, Heading, VStack, FormControl, FormLabel, Input, Button, Text, HStack } from "@chakra-ui/react";
+import { useHelp } from "../help-context";
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "../useI18n";
 import { listUsers, updateUser } from "../lib/api";
 
 export default function ChangePassword() {
   const { t } = useI18n();
+  const help = useHelp();
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,10 @@ export default function ChangePassword() {
 
   return (
     <Box>
-      <Heading size="md" mb={4}>{t("change_password") || "Trocar senha"}</Heading>
+      <HStack justify="space-between" mb={4}>
+        <Heading size="md">{t("change_password") || "Trocar senha"}</Heading>
+        <Button size="sm" onClick={() => help.open("login_mfa")}>Ajuda</Button>
+      </HStack>
       <VStack align="stretch" spacing={3} bg="white" p={4} borderRadius="md" border="1px solid" borderColor="gray.200">
         <FormControl>
           <FormLabel>{t("password_new") || "Nova senha"}</FormLabel>

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
-import { Box, Heading, HStack, Input, Select, Button, Text, VStack, Table, Thead, Tbody, Tr, Th, Td, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter, Checkbox, useToast, useColorModeValue } from "@chakra-ui/react";
+import { useEffect, useState, useCallback } from "react";
+import { Box, Heading, HStack, Input, Select, Button, Text, VStack, Table, Thead, Tbody, Tr, Th, Td, FormControl, FormLabel, FormHelperText, Tooltip, Icon, Alert, AlertIcon, AlertDescription, Link, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure, ModalFooter, Checkbox, useToast, useColorModeValue, Badge, useMediaQuery } from "@chakra-ui/react";
 import { MdInfoOutline } from "react-icons/md";
 import { getDocumentTypes, getDealUploads, uploadDocument, logDocumentsExample, getDeals, createDocumentType, listContacts, listOrganizations, getRequiredDocumentsForDeal, setRequiredDocumentsForDeal, getOrganizationRequiredDocuments, setOrganizationRequiredDocuments } from "../lib/api";
 import { useI18n } from "../useI18n";
+import { useHelp } from "../help-context";
 import { useAuth } from "../useAuth";
 import { useSearchParams } from "react-router-dom";
 
@@ -14,6 +15,7 @@ type ContactSummary = { id: number; first_name: string; last_name: string };
 export default function Upload() {
   const { t } = useI18n();
   const { canAccess } = useAuth();
+  const help = useHelp();
   const learn = useDisclosure();
   const typeModal = useDisclosure();
   const toast = useToast();
@@ -35,6 +37,12 @@ export default function Upload() {
   const [requiredSelection, setRequiredSelection] = useState<number[]>([]);
   const [orgRequiredSelection, setOrgRequiredSelection] = useState<number[]>([]);
   const [dealDocStatus, setDealDocStatus] = useState<Record<number, { pending: number; total: number }>>({});
+  const [initialRequiredSelection, setInitialRequiredSelection] = useState<number[]>([]);
+  const [initialOrgRequiredSelection, setInitialOrgRequiredSelection] = useState<number[]>([]);
+
+  const btnBg = useColorModeValue("brand.500","brand.600");
+  const btnHoverBg = useColorModeValue("brand.600","brand.500");
+  const [isLarge] = useMediaQuery("(min-width: 768px)");
 
   const panelBg = useColorModeValue("white","gray.800");
   const panelBorder = useColorModeValue("gray.200","gray.700");
@@ -66,7 +74,9 @@ export default function Upload() {
           .then((rows) => {
             if (cancelled) return;
             setRequiredDocs(rows || []);
-            setRequiredSelection((rows || []).map((r: { document_type_id: number }) => r.document_type_id));
+            const sel = (rows || []).map((r: { document_type_id: number }) => r.document_type_id);
+            setRequiredSelection(sel);
+            setInitialRequiredSelection(sel);
             const total = (rows || []).length;
             const pending = (rows || []).filter((r: { fulfilled: boolean }) => !r.fulfilled).length;
             setDealDocStatus((prev) => {
@@ -90,7 +100,9 @@ export default function Upload() {
           if (!cancelled) setContacts(rows || []);
           const orgReq = await getOrganizationRequiredDocuments(orgId);
           if (!cancelled) {
-            setOrgRequiredSelection((orgReq || []).map((r: { document_type_id: number }) => r.document_type_id));
+            const orgSel = (orgReq || []).map((r: { document_type_id: number }) => r.document_type_id);
+            setOrgRequiredSelection(orgSel);
+            setInitialOrgRequiredSelection(orgSel);
           }
         } catch {
           if (!cancelled) setContacts([]);
@@ -127,10 +139,13 @@ export default function Upload() {
     return () => { cancelled = true; };
   }, [deals]);
 
-  const onUpload = async () => {
-    setError(null); setSuccess(null);
+  const [saving, setSaving] = useState(false);
+  const [initial, setInitial] = useState<{ dealId: number | null; documentTypeId: number | null; contactId: number | null; hasFile: boolean; notes: string }>(() => ({ dealId: dealId ?? null, documentTypeId: documentTypeId ?? null, contactId: contactId ?? null, hasFile: !!file, notes }));
+  const onUpload = useCallback(async () => {
+    setError(null); setSuccess(null); setSaving(true);
     if (!dealId || !documentTypeId || !file) {
       setError("Informe Deal ID, tipo de documento e selecione um arquivo.");
+      setSaving(false);
       return;
     }
     try {
@@ -138,12 +153,14 @@ export default function Upload() {
       setSuccess("Upload realizado com sucesso.");
       setFile(null);
       setNotes("");
+      setInitial({ dealId, documentTypeId, contactId, hasFile: false, notes: "" });
       getDealUploads(dealId).then(setUploads).catch(() => {});
       const rows = await getRequiredDocumentsForDeal(dealId).catch(() => []);
       setRequiredDocs(rows || []);
       const total = (rows || []).length;
       const pending = (rows || []).filter((r: { fulfilled: boolean }) => !r.fulfilled).length;
       setDealDocStatus((prev) => ({ ...prev, [dealId]: { pending, total } }));
+      toast({ title: t("upload"), description: t("save"), status: "success", duration: 3000, isClosable: true });
     } catch (e) {
       const msg = String((e as Error).message || e);
       const mbMatch = msg.match(/>\s*(\d+)\s*MB/);
@@ -153,12 +170,128 @@ export default function Upload() {
       } else {
         setError(msg);
       }
+      toast({ title: t("upload"), description: msg, status: "error", duration: 5000, isClosable: true });
+    } finally { setSaving(false); }
+  }, [dealId, documentTypeId, file, notes, contactId, t, toast]);
+
+  const dirty = JSON.stringify({ dealId, documentTypeId, contactId, hasFile: !!file, notes }) !== JSON.stringify(initial);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const k = String(e.key || "").toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === "s") { e.preventDefault(); if (!saving && dealId && documentTypeId && file && dirty) onUpload(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [saving, dealId, documentTypeId, file, dirty, onUpload]);
+
+  const dirtyRequired = JSON.stringify([...requiredSelection].sort()) !== JSON.stringify([...initialRequiredSelection].sort());
+  const dirtyOrg = JSON.stringify([...orgRequiredSelection].sort()) !== JSON.stringify([...initialOrgRequiredSelection].sort());
+
+  const saveRequiredDocs = useCallback(async () => {
+    try {
+      const rows = await setRequiredDocumentsForDeal(dealId, requiredSelection);
+      setRequiredDocs(rows || []);
+      setInitialRequiredSelection([...requiredSelection]);
+      const total = (rows || []).length;
+      const pending = (rows || []).filter((r: { fulfilled: boolean }) => !r.fulfilled).length;
+      setDealDocStatus((prev) => {
+        const next = { ...prev, [dealId]: { pending, total } };
+        try {
+          const tenantId = Number(localStorage.getItem("tenantId") || 1);
+          localStorage.setItem(`tenant:${tenantId}:uploads_status`, JSON.stringify(next));
+          const sum = Object.values(next).reduce((acc, v) => acc + (v?.pending || 0), 0);
+          localStorage.setItem(`tenant:${tenantId}:uploads_pending_total`, String(sum));
+        } catch (e) { void e; }
+        return next;
+      });
+      toast({ title: t("required_docs_title"), description: t("save"), status: "success", duration: 3000, isClosable: true });
+      setSuccess(t("required_docs_saved"));
+    } catch (e) {
+      const msg = String((e as Error).message || e);
+      setError(msg);
+      toast({ title: t("required_docs_title"), description: msg, status: "error", duration: 5000, isClosable: true });
     }
-  };
+  }, [dealId, requiredSelection, t, toast]);
+
+  const saveOrgTemplate = useCallback(async () => {
+    try {
+      const orgIdMaybe = deals.find(d => d.id === dealId)?.organization_id;
+      if (!orgIdMaybe) { setError(t("upload_error_no_org")); return; }
+      const orgId = orgIdMaybe;
+      await setOrganizationRequiredDocuments(orgId, orgRequiredSelection);
+      setSuccess(t("org_template_saved"));
+      setInitialOrgRequiredSelection([...orgRequiredSelection]);
+      const affectedIds = deals.filter(d => d.organization_id === orgId).map(d => d.id);
+      if (affectedIds.length > 0) {
+        const results = await Promise.all(affectedIds.map(id => getRequiredDocumentsForDeal(id).catch(() => [])));
+        setDealDocStatus(prev => {
+          const next = { ...prev };
+          affectedIds.forEach((id, i) => {
+            const rows = results[i] as Array<{ fulfilled: boolean }>;
+            const total = rows.length;
+            const pending = rows.filter(r => !r.fulfilled).length;
+            next[id] = { pending, total };
+          });
+          try {
+            const tenantId = Number(localStorage.getItem("tenantId") || 1);
+            localStorage.setItem(`tenant:${tenantId}:uploads_status`, JSON.stringify(next));
+            const sum = Object.values(next).reduce((acc, v) => acc + (v?.pending || 0), 0);
+            localStorage.setItem(`tenant:${tenantId}:uploads_pending_total`, String(sum));
+          } catch (e) { void e; }
+          return next;
+        });
+      }
+      toast({ title: t("org_template_title"), description: t("save"), status: "success", duration: 3000, isClosable: true });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/404|Not\s*Found/i.test(msg)) {
+        const d = deals.find(x => x.id === dealId);
+        const orgId = d?.organization_id;
+        const orgName = orgId ? (orgs.find(o => o.id === orgId)?.name ?? `#${orgId}`) : undefined;
+        const orgInfo = orgId ? `${t("organizations") || t("organization")}: ${orgName}` : "";
+        toast({
+          title: t("org_template_save"),
+          description: (
+            <Box>
+              <Text mb={2}>{`${t("upload_error_no_org")} (${t("deals")}: #${dealId}${orgInfo ? ", " + orgInfo : ""})`}</Text>
+              <HStack>
+                <Link href={`/organizations?deal=${dealId}`} color="blue.600">{t("organizations")}</Link>
+                <Link href={`/organizations?create=1&deal=${dealId}`} color="blue.600">{`${t("new")} ${t("organizations")}`}</Link>
+              </HStack>
+            </Box>
+          ),
+          status: "warning",
+          duration: 5000,
+          isClosable: true,
+        });
+      } else {
+        setError(msg);
+        toast({ title: t("org_template_title"), description: msg, status: "error", duration: 5000, isClosable: true });
+      }
+    }
+  }, [deals, dealId, orgRequiredSelection, orgs, t, toast]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const k = String(e.key || "").toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && k === "s") { e.preventDefault(); if (!saving && dirtyRequired && canAccess("upload","edit")) saveRequiredDocs(); }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (k === "o" || k === "t")) { e.preventDefault(); if (!saving && dirtyOrg && canAccess("upload","edit")) saveOrgTemplate(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [saving, dirtyRequired, dirtyOrg, saveRequiredDocs, saveOrgTemplate, canAccess]);
 
   return (
     <Box>
-      <Heading size="md" mb={4}>{t("upload")}</Heading>
+      <HStack justify="space-between" mb={4}>
+        <Heading size="md">{t("upload")}</Heading>
+        <HStack>
+          <Button size="sm" variant="ghost" onClick={() => help.open("envio_docs_tags")}>Ajuda</Button>
+          <Button size="sm" variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={onUpload} isLoading={saving} isDisabled={!canAccess("upload","edit") || !dealId || !documentTypeId || !file || !dirty}>{t("save")}</Button>
+          {dirty && <Badge colorScheme="orange" variant="solid">Alterações não salvas</Badge>}
+        </HStack>
+      </HStack>
       <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder}>
         <Alert status="info" borderRadius="md">
           <AlertIcon />
@@ -180,7 +313,7 @@ export default function Upload() {
               </VStack>
             </ModalBody>
             <ModalFooter>
-              <Button colorScheme="blue" onClick={() => {
+              <Button colorScheme="brand" onClick={() => {
                 const firstType = docTypes[0]?.id;
                 const dId = dealId || 1;
                 setDealId(dId);
@@ -256,7 +389,7 @@ export default function Upload() {
           <FormHelperText>{t("upload_notes_help")}</FormHelperText>
         </FormControl>
         <HStack>
-          <Button colorScheme="blue" onClick={onUpload} isDisabled={!canAccess("upload","edit")}>{t("upload_button")}</Button>
+          <Button variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={onUpload} isDisabled={!canAccess("upload","edit") || !dealId || !documentTypeId || !file || !dirty} isLoading={saving}>{t("upload_button")}</Button>
           {error && <Text color="red.500">{error}</Text>}
           {success && <Text color="green.600">{success}</Text>}
         </HStack>
@@ -287,7 +420,7 @@ export default function Upload() {
               </VStack>
             </ModalBody>
             <ModalFooter>
-              <Button colorScheme="blue" onClick={async () => {
+              <Button colorScheme="brand" onClick={async () => {
                 try {
                   const payload = {
                     name: newType.name,
@@ -309,7 +442,10 @@ export default function Upload() {
         </Modal>
       </VStack>
 
-      <Heading size="sm" mt={6} mb={3}>{t("required_docs_title")}</Heading>
+      <HStack justify="space-between" mt={6} mb={3}>
+        <Heading size="sm">{t("required_docs_title")}</Heading>
+        {dirtyRequired && <Badge colorScheme="orange" variant="solid">Alterações não salvas</Badge>}
+      </HStack>
       <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder}>
         <Table>
           <Thead>
@@ -341,33 +477,16 @@ export default function Upload() {
           ))}
         </VStack>
         <HStack>
-          <Button onClick={async () => {
-            try {
-              const rows = await setRequiredDocumentsForDeal(dealId, requiredSelection);
-              setRequiredDocs(rows || []);
-              setSuccess(t("required_docs_saved"));
-              const total = (rows || []).length;
-              const pending = (rows || []).filter((r: { fulfilled: boolean }) => !r.fulfilled).length;
-              setDealDocStatus((prev) => {
-                const next = { ...prev, [dealId]: { pending, total } };
-                try {
-                  const tenantId = Number(localStorage.getItem("tenantId") || 1);
-                  localStorage.setItem(`tenant:${tenantId}:uploads_status`, JSON.stringify(next));
-                  const sum = Object.values(next).reduce((acc, v) => acc + (v?.pending || 0), 0);
-                  localStorage.setItem(`tenant:${tenantId}:uploads_pending_total`, String(sum));
-                } catch (e) { void e; }
-                return next;
-              });
-            } catch (e) {
-              setError(String((e as Error).message || e));
-            }
-          }} isDisabled={!canAccess("upload","edit")}>{t("required_docs_save")}</Button>
+          <Button variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={saveRequiredDocs} isDisabled={!canAccess("upload","edit") || !dirtyRequired}>{t("required_docs_save")}</Button>
         </HStack>
       </VStack>
 
       {deals.find(d => d.id === dealId)?.organization_id ? (
         <>
-          <Heading size="sm" mt={6} mb={3}>{t("org_template_title")}</Heading>
+          <HStack justify="space-between" mt={6} mb={3}>
+            <Heading size="sm">{t("org_template_title")}</Heading>
+            {dirtyOrg && <Badge colorScheme="orange" variant="solid">Alterações não salvas</Badge>}
+          </HStack>
           <VStack align="stretch" spacing={3} bg={panelBg} p={4} borderRadius="md" border="1px solid" borderColor={panelBorder}>
             <Heading size="xs" mt={0}>{t("org_template_manage")}</Heading>
             <VStack align="stretch">
@@ -381,61 +500,9 @@ export default function Upload() {
               ))}
             </VStack>
             <HStack>
-              <Button onClick={async () => {
-              try {
-                const orgIdMaybe = deals.find(d => d.id === dealId)?.organization_id;
-                if (!orgIdMaybe) { setError(t("upload_error_no_org")); return; }
-                const orgId = orgIdMaybe;
-                await setOrganizationRequiredDocuments(orgId, orgRequiredSelection);
-                setSuccess(t("org_template_saved"));
-                const affectedIds = deals.filter(d => d.organization_id === orgId).map(d => d.id);
-                if (affectedIds.length > 0) {
-                  const results = await Promise.all(affectedIds.map(id => getRequiredDocumentsForDeal(id).catch(() => [])));
-                  setDealDocStatus(prev => {
-                    const next = { ...prev };
-                    affectedIds.forEach((id, i) => {
-                      const rows = results[i] as Array<{ fulfilled: boolean }>;
-                      const total = rows.length;
-                      const pending = rows.filter(r => !r.fulfilled).length;
-                      next[id] = { pending, total };
-                    });
-                  try {
-                    const tenantId = Number(localStorage.getItem("tenantId") || 1);
-                    localStorage.setItem(`tenant:${tenantId}:uploads_status`, JSON.stringify(next));
-                    const sum = Object.values(next).reduce((acc, v) => acc + (v?.pending || 0), 0);
-                    localStorage.setItem(`tenant:${tenantId}:uploads_pending_total`, String(sum));
-                  } catch (e) { void e; }
-                  return next;
-                  
-                  });
-                }
-              } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                if (/404|Not\s*Found/i.test(msg)) {
-                  const d = deals.find(x => x.id === dealId);
-                  const orgId = d?.organization_id;
-                  const orgName = orgId ? (orgs.find(o => o.id === orgId)?.name ?? `#${orgId}`) : undefined;
-                  const orgInfo = orgId ? `${t("organizations") || t("organization")}: ${orgName}` : "";
-                  toast({
-                    title: t("org_template_save"),
-                    description: (
-                      <Box>
-                        <Text mb={2}>{`${t("upload_error_no_org")} (${t("deals")}: #${dealId}${orgInfo ? ", " + orgInfo : ""})`}</Text>
-                        <HStack>
-                          <Link href={`/organizations?deal=${dealId}`} color="blue.600">{t("organizations")}</Link>
-                          <Link href={`/organizations?create=1&deal=${dealId}`} color="blue.600">{`${t("new")} ${t("organizations")}`}</Link>
-                        </HStack>
-                      </Box>
-                    ),
-                    status: "warning",
-                    duration: 5000,
-                    isClosable: true,
-                  });
-                } else {
-                  setError(msg);
-                }
-              }
-            }} isDisabled={!canAccess("upload","edit")}>{t("org_template_save")}</Button>
+              <Button variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={saveOrgTemplate} isDisabled={!canAccess("upload","edit") || !dirtyOrg || !deals.find(d => d.id === dealId)?.organization_id}>
+                {t("org_template_save")}
+              </Button>
               <Button variant="outline" onClick={() => {
                 // sincronizar: aplica do template para o deal se conjunto atual estiver vazio
                 if (requiredSelection.length === 0) {
@@ -473,6 +540,11 @@ export default function Upload() {
           ))}
         </Tbody>
       </Table>
+      {isLarge && (
+        <Box position="fixed" bottom="24px" right="24px" zIndex={10}>
+          <Button size="md" variant="solid" bg={btnBg} _hover={{ bg: btnHoverBg }} color="white" onClick={onUpload} isLoading={saving} isDisabled={!canAccess("upload","edit") || !dealId || !documentTypeId || !file || !dirty}>{t("save")}</Button>
+        </Box>
+      )}
     </Box>
   );
 }
